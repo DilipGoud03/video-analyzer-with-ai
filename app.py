@@ -2,6 +2,8 @@ import os
 import streamlit as st
 from moviepy.video.io.VideoFileClip import VideoFileClip
 
+save_dir = "uploads"
+
 
 def format_time(seconds: int) -> str:
     m = int(seconds) // 60
@@ -33,14 +35,13 @@ if uploaded_file is not None and uploaded_file.name != st.session_state["uploade
 save_path = None
 if uploaded_file is not None:
     if st.button("Process Video"):
-        save_dir = "uploads"
         os.makedirs(save_dir, exist_ok=True)
         save_path = os.path.join(save_dir, uploaded_file.name)
         with open(save_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
         st.success(f"✅ Saved to `{save_path}`")
 
-        # Try to read video duration
+        # Read video duration
         try:
             clip = VideoFileClip(save_path)
             duration = clip.duration
@@ -53,9 +54,6 @@ if uploaded_file is not None:
         st.session_state["duration"] = int(duration)
         st.session_state["uploaded_name"] = uploaded_file.name
 
-# --------------------------
-# Display video info and slider
-# --------------------------
 selected_time = 0
 if st.session_state["save_path"]:
     duration = st.session_state["duration"]
@@ -66,17 +64,15 @@ if st.session_state["save_path"]:
         f"({format_time(int(duration))})"
     )
 
-    selected_time = st.slider(
-        "Summary duration",
-        min_value=1,
-        max_value=max(1, int(duration)),
-        value=st.session_state.get("selected_time", default_seconds),
-        step=1,
-        key="selected_time",
+    start_time, end_time = st.slider(
+        "Select time range (in seconds)",
+        0, duration, (0, min(30, duration)),
+        step=1
     )
+
+    st.write(
+        f"Selected Range: {format_time(start_time)} → {format_time(end_time)}")
 
 
 if selected_time > 0:
     st.write(f"Selected summary time: {format_time(selected_time)}")
-
-
