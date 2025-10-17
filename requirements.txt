@@ -3,3 +3,4 @@ moviepy
 langgraph
 langchain_core
 langchain-google-genai
+google-generativeai

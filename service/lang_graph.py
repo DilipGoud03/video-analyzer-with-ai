@@ -1,89 +1,68 @@
-from typing_extensions import TypedDict
+from typing import TypedDict, Annotated, List, Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langgraph.graph import StateGraph, START, END
-from IPython.display import Image, display
+from langgraph.graph import StateGraph, END
+import google.generativeai as genai
+from dotenv import load_dotenv
+import operator
 import os
+import mimetypes
 
+load_dotenv()
 
 if "GOOGLE_API_KEY" not in os.environ:
-    os.environ["GOOGLE_API_KEY"] = ""
+    os.environ["GOOGLE_API_KEY"] = "AIzaSyD0D5lO9oajtO-THvXKpMQy902QL8zGgFU"
 
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
-# Graph state
-
-
-class State(TypedDict):
-    topic: str
-    joke: str
-    improved_joke: str
-    final_joke: str
+genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
+model = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
 
 
-# Nodes
-def generate_joke(state: State):
-    """First LLM call to generate initial joke"""
 
-    msg = llm.invoke(f"Write a short joke about {state['topic']}")
-    return {"joke": msg.content}
-
-
-def check_punchline(state: State):
-    """Gate function to check if the joke has a punchline"""
-
-    # Simple check - does the joke contain "?" or "!"
-    if "?" in state["joke"] or "!" in state["joke"]:
-        return "Pass"
-    return "Fail"
+# Define the State
+class VideoAnalysisState(TypedDict):
+    video_path: str
+    uploaded_file: Optional[dict]
+    summary: Optional[str]
+    analysis_log: Annotated[List[str], operator.add]
 
 
-def improve_joke(state: State):
-    """Second LLM call to improve the joke"""
+# Define the Nodes
+def upload_video(state: VideoAnalysisState):
+    path = state["video_path"]
+    try:
+        mime_type, _ = mimetypes.guess_type(path)
+        with open(path, "rb") as f:
+            video_bytes = f.read()
 
-    msg = llm.invoke(
-        f"Make this joke funnier by adding wordplay: {state['joke']}")
-    return {"improved_joke": msg.content}
+        uploaded_file = {
+            "inline_data": {
+                "mime_type": mime_type or "video/mp4",
+                "data": video_bytes
+            }
+        }
+
+        return {"uploaded_file": uploaded_file, "analysis_log": [f"Loaded {path} inline."]}
+    except Exception as e:
+        print(f"Error loading video: {e}")
+        raise
 
 
-def polish_joke(state: State):
-    """Third LLM call for final polish"""
-    msg = llm.invoke(
-        f"Add a surprising twist to this joke: {state['improved_joke']}")
-    return {"final_joke": msg.content}
+def summarize_video(state: VideoAnalysisState):
+    uploaded_file = state["uploaded_file"]
+    prompt = "Generate a concise one-paragraph summary for this video."
+    response = genai.GenerativeModel("gemini-2.0-flash").generate_content([uploaded_file, prompt]
+                                                                          )
+
+    return {"summary": response.text, "analysis_log": ["Video summarized."]}
 
 
-# Build workflow
-workflow = StateGraph(State)
+# Build the Pipline
+pipline = StateGraph(VideoAnalysisState)
 
-# Add nodes
-workflow.add_node("generate_joke", generate_joke)
-workflow.add_node("improve_joke", improve_joke)
-workflow.add_node("polish_joke", polish_joke)
+pipline.add_node("upload_video", upload_video)
+pipline.add_node("summarize_video", summarize_video)
 
-# Add edges to connect nodes
-workflow.add_edge(START, "generate_joke")
-workflow.add_conditional_edges(
-    "generate_joke", check_punchline, {"Fail": "improve_joke", "Pass": END}
-)
-workflow.add_edge("improve_joke", "polish_joke")
-workflow.add_edge("polish_joke", END)
+pipline.set_entry_point("upload_video")
+pipline.add_edge("upload_video", "summarize_video")
+pipline.add_edge("summarize_video", END)
 
-# Compile
-chain = workflow.compile()
-
-# Show workflow
-display(Image(chain.get_graph().draw_mermaid_png()))
-
-# Invoke
-state = chain.invoke({"topic": "cats"})
-print("Initial joke:")
-print(state["joke"])
-print("\n--- --- ---\n")
-if "improved_joke" in state:
-    print("Improved joke:")
-    print(state["improved_joke"])
-    print("\n--- --- ---\n")
-
-    print("Final joke:")
-    print(state["final_joke"])
-else:
-    print("Joke failed quality gate - no punchline detected!")
+app = pipline.compile()

@@ -1,6 +1,7 @@
 import os
 import streamlit as st
 from moviepy.video.io.VideoFileClip import VideoFileClip
+from service.lang_graph import app
 
 save_dir = "uploads"
 
@@ -18,7 +19,6 @@ uploaded_file = st.file_uploader(
     "Choose a video file", type=["mp4", "mov", "avi", "mkv"]
 )
 
-# Initialize session state
 if "save_path" not in st.session_state:
     st.session_state["save_path"] = None
 if "duration" not in st.session_state:
@@ -26,7 +26,6 @@ if "duration" not in st.session_state:
 if "uploaded_name" not in st.session_state:
     st.session_state["uploaded_name"] = None
 
-# Reset session if new video uploaded
 if uploaded_file is not None and uploaded_file.name != st.session_state["uploaded_name"]:
     st.session_state["save_path"] = None
     st.session_state["duration"] = 0
@@ -76,3 +75,13 @@ if st.session_state["save_path"]:
 
 if selected_time > 0:
     st.write(f"Selected summary time: {format_time(selected_time)}")
+
+if save_path is None:
+    print(f"File not found")
+else:
+    print(f"Starting analysis for '{save_path}'")
+    inputs = {"video_path": save_path, "analysis_log": []}
+    state = app.invoke(inputs)
+    st.spinner("Loading......")
+    if 'summary' in state:
+        st.write(state['summary'])
