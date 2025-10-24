@@ -1,3 +1,6 @@
-venv
 .env
-uploads/*
+venv
+org_videos/*
+temp_videos/*
+*/__pycache__
+**/__pycache__
