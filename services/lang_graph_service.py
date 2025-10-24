@@ -4,7 +4,6 @@ from langchain_core.messages import HumanMessage
 from langgraph.graph import StateGraph, END
 import google.generativeai as genai
 from dotenv import load_dotenv
-import operator
 import os
 import mimetypes
 import base64
@@ -18,58 +17,53 @@ genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
 # model = ChatGoogleGenerativeAI(model="gemini-2.5-pro")
 
 
-
 # Define the State
 
+class UploadedFile(TypedDict):
+    mime_type: str
+    data: bytes
 
-class VideoAnalysisState(TypedDict):
+
+class MainState(TypedDict):
     video_path: str
-    uploaded_file: Optional[dict]
+    uploaded_file: Optional[UploadedFile]
     summary: Optional[str]
-    analysis_log: Annotated[List[str], operator.add]
 
 
 # Define the Nodes
-def upload_video(state: VideoAnalysisState):
+def upload_video(state: MainState):
     path = state["video_path"]
     try:
-        mime_type, _ = mimetypes.guess_type(path)
+        mime_type, _ = mimetypes.guess_type(path) if path else "video/mp4"
         video_bytes = open(path, "rb").read()
 
         uploaded_file = {
-            "inline_data": {
-                "mime_type": mime_type or "video/mp4",
-                "data": video_bytes
-            }
+            "mime_type": mime_type,
+            "data": video_bytes
         }
 
-        return {"uploaded_file": uploaded_file, "analysis_log": [f"Loaded {path} inline."]}
+        return {"uploaded_file": uploaded_file}
     except Exception as e:
         print(f"Error loading video: {e}")
         raise
 
 
-def summarize_video(state: VideoAnalysisState):
+def summarize_video(state: MainState):
     uploaded_file = state["uploaded_file"]
     prompt = "Generate a concise one-paragraph summary for this video."
-    response = genai.GenerativeModel("gemini-2.0-flash").generate_content([uploaded_file, prompt])
-    return {"summary": response.text, "analysis_log": ["Video summarized."]}
+    response = genai.GenerativeModel(
+        "gemini-2.5-flash").generate_content([uploaded_file, prompt])
+    return {"summary": response.text}
 
 
-# def summarize_video(state: VideoAnalysisState):
+# def summarize_video(state: MainState):
 #     uploaded = state.get("uploaded_file")
 #     if not uploaded:
 #         raise ValueError("No uploaded_file found in state")
 
-#     if "inline_data" in uploaded and isinstance(uploaded["inline_data"], dict):
-#         inline = uploaded["inline_data"]
-#         video_bytes = inline.get("data")
-#         mime_type = inline.get("mime_type") or "video/mp4"
-#     else:
-#         video_bytes = uploaded.get("data")
-#         mime_type = uploaded.get("mime_type") or "video/mp4"
+#     video_bytes = uploaded.get("data")
+#     mime_type = uploaded.get("mime_type")
 
-#     print(mime_type)
 #     if not video_bytes:
 #         raise ValueError("Uploaded file does not contain video bytes")
 
@@ -94,11 +88,12 @@ def summarize_video(state: VideoAnalysisState):
 #     summary = getattr(response, "content", None)
 #     if summary is None and isinstance(response, (list, tuple)) and len(response) > 0:
 #         summary = getattr(response[0], "content", None)
-#     return {"summary": summary, "analysis_log": ["Video summarized."]}
+#     return {"summary": summary}
 
 
 # Build the Pipline
-pipline = StateGraph(VideoAnalysisState)
+
+pipline = StateGraph(MainState)
 
 pipline.add_node("upload_video", upload_video)
 pipline.add_node("summarize_video", summarize_video)
