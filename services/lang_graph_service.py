@@ -14,7 +14,6 @@ load_dotenv()
 if "GOOGLE_API_KEY" not in os.environ:
     os.environ["GOOGLE_API_KEY"] = "AIzaSyD0D5lO9oajtO-THvXKpMQy902QL8zGgFU"
 
-genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
 # Define the State
 
 
@@ -54,16 +53,35 @@ def summarize_video(state: MainState):
     if not uploaded:
         raise ValueError("No uploaded_file found in state")
 
-    video_bytes = uploaded.get("data")
-    mime_type = uploaded.get("mime_type")
-    path = uploaded.get("path")
+    model = ChatGoogleGenerativeAI(model="gemini-2.5-pro")
+
+    # video_bytes = uploaded.get("data")
+    # mime_type = uploaded.get("mime_type")
 
     # if not video_bytes:
     #     raise ValueError("Uploaded file does not contain video bytes")
 
     # video_base64 = base64.b64encode(video_bytes).decode("utf-8")
 
-    model = ChatGoogleGenerativeAI(model="gemini-2.5-pro")
+    # message = HumanMessage(
+    #     content=[
+    #         {
+    #             "type": "text",
+    #             "text": "Generate a summary for this video.",
+    #         },
+    #         {
+    #             "type": "video",
+    #             "base64": video_base64,
+    #             "mime_type": "video/mp4",
+    #         },
+    #     ]
+    # )
+    # response = model.invoke([message])
+
+
+    
+    genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
+    path = uploaded.get("path")
     video_file = genai.upload_file(path=path)
 
     # Wait for processing
@@ -87,6 +105,7 @@ def summarize_video(state: MainState):
 
     response = model.invoke([message])
     genai.delete_file(video_file.name)
+
     return {"summary": response.content}
 
 
