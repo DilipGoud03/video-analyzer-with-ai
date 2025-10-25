@@ -1,25 +1,24 @@
-from typing import TypedDict, Annotated, List, Optional
-# from langchain_google_genai import ChatGoogleGenerativeAI
+from typing import TypedDict, Optional
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from langgraph.graph import StateGraph, END
-import google.generativeai as genai
 from dotenv import load_dotenv
 import os
 import mimetypes
 import base64
+import google.generativeai as genai
+import time
 
 load_dotenv()
 
 if "GOOGLE_API_KEY" not in os.environ:
     os.environ["GOOGLE_API_KEY"] = "AIzaSyD0D5lO9oajtO-THvXKpMQy902QL8zGgFU"
 
-genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
-# model = ChatGoogleGenerativeAI(model="gemini-2.5-pro")
-
-
 # Define the State
 
+
 class UploadedFile(TypedDict):
+    path: str
     mime_type: str
     data: bytes
 
@@ -38,6 +37,7 @@ def upload_video(state: MainState):
         video_bytes = open(path, "rb").read()
 
         uploaded_file = {
+            'path': path,
             "mime_type": mime_type,
             "data": video_bytes
         }
@@ -49,46 +49,64 @@ def upload_video(state: MainState):
 
 
 def summarize_video(state: MainState):
-    uploaded_file = state["uploaded_file"]
-    prompt = "Generate a summary for this video."
-    response = genai.GenerativeModel(
-        "gemini-2.5-flash").generate_content([uploaded_file, prompt])
-    return {"summary": response.text}
+    uploaded = state.get("uploaded_file")
+    if not uploaded:
+        raise ValueError("No uploaded_file found in state")
+
+    model = ChatGoogleGenerativeAI(model="gemini-2.5-pro")
+
+    # video_bytes = uploaded.get("data")
+    # mime_type = uploaded.get("mime_type")
+
+    # if not video_bytes:
+    #     raise ValueError("Uploaded file does not contain video bytes")
+
+    # video_base64 = base64.b64encode(video_bytes).decode("utf-8")
+
+    # message = HumanMessage(
+    #     content=[
+    #         {
+    #             "type": "text",
+    #             "text": "Generate a summary for this video.",
+    #         },
+    #         {
+    #             "type": "video",
+    #             "base64": video_base64,
+    #             "mime_type": "video/mp4",
+    #         },
+    #     ]
+    # )
+    # response = model.invoke([message])
 
 
-# def summarize_video(state: MainState):
-#     uploaded = state.get("uploaded_file")
-#     if not uploaded:
-#         raise ValueError("No uploaded_file found in state")
+    
+    genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
+    path = uploaded.get("path")
+    video_file = genai.upload_file(path=path)
 
-#     video_bytes = uploaded.get("data")
-#     mime_type = uploaded.get("mime_type")
+    # Wait for processing
+    while video_file.state.name == "PROCESSING":
+        time.sleep(2)
+        video_file = genai.get_file(video_file.name)
 
-#     if not video_bytes:
-#         raise ValueError("Uploaded file does not contain video bytes")
+    message = HumanMessage(
+        content=[
+            {
+                "type": "text",
+                "text": "Generate a summary for this video."
+            },
+            {
+                "type": "media",
+                "mime_type": video_file.mime_type,
+                "file_uri": video_file.uri
+            }
+        ]
+    )
 
-#     video_base64 = base64.b64encode(video_bytes).decode("utf-8")
+    response = model.invoke([message])
+    genai.delete_file(video_file.name)
 
-#     message = HumanMessage(
-#         content=[
-#             {
-#                 "type": "text",
-#                 "text": "Generate a summary for this video.",
-#             },
-#             {
-#                 "type": "video",
-#                 "base64": video_base64,
-#                 "mime_type": "video/mp4",
-#             },
-#         ]
-#     )
-#     response = model.invoke([message])
-
-#     print("Response", response)
-#     summary = getattr(response, "content", None)
-#     if summary is None and isinstance(response, (list, tuple)) and len(response) > 0:
-#         summary = getattr(response[0], "content", None)
-#     return {"summary": summary}
+    return {"summary": response.content}
 
 
 # Build the Pipline
