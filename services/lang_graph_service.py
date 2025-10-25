@@ -6,16 +6,20 @@ from dotenv import load_dotenv
 import os
 import mimetypes
 import base64
+import google.generativeai as genai
+import time
 
 load_dotenv()
 
 if "GOOGLE_API_KEY" not in os.environ:
     os.environ["GOOGLE_API_KEY"] = "AIzaSyD0D5lO9oajtO-THvXKpMQy902QL8zGgFU"
 
-
+genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
 # Define the State
 
+
 class UploadedFile(TypedDict):
+    path: str
     mime_type: str
     data: bytes
 
@@ -34,6 +38,7 @@ def upload_video(state: MainState):
         video_bytes = open(path, "rb").read()
 
         uploaded_file = {
+            'path': path,
             "mime_type": mime_type,
             "data": video_bytes
         }
@@ -51,39 +56,37 @@ def summarize_video(state: MainState):
 
     video_bytes = uploaded.get("data")
     mime_type = uploaded.get("mime_type")
+    path = uploaded.get("path")
 
-    if not video_bytes:
-        raise ValueError("Uploaded file does not contain video bytes")
+    # if not video_bytes:
+    #     raise ValueError("Uploaded file does not contain video bytes")
 
-    video_base64 = base64.b64encode(video_bytes).decode("utf-8")
+    # video_base64 = base64.b64encode(video_bytes).decode("utf-8")
+
+    model = ChatGoogleGenerativeAI(model="gemini-2.5-pro")
+    video_file = genai.upload_file(path=path)
+
+    # Wait for processing
+    while video_file.state.name == "PROCESSING":
+        time.sleep(2)
+        video_file = genai.get_file(video_file.name)
 
     message = HumanMessage(
         content=[
             {
                 "type": "text",
-                "text": "Generate a concise one-paragraph summary for this video.",
-            },
-            {
-                "type": "file",
-                "source_type": "base64",
-                "mime_type": mime_type,
-                "data": video_base64,
-            },
-            {
-                "type": "video",
-                "base64": video_base64,
-                "mime_type": mime_type,
+                "text": "Generate a summary for this video."
             },
             {
                 "type": "media",
-                "file_uri": "https://www.youtube.com/watch?v=9hE5-98ZeCg",
-                "mime_type": "video/mp4",
-            },
+                "mime_type": video_file.mime_type,
+                "file_uri": video_file.uri
+            }
         ]
     )
 
-    model = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
     response = model.invoke([message])
+    genai.delete_file(video_file.name)
     return {"summary": response.content}
 
 

@@ -4,5 +4,6 @@ langgraph
 langchain 
 langchain-core 
 langchain-google-genai 
+google
 google-generativeai
 apscheduler

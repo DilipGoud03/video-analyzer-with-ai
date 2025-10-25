@@ -20,8 +20,8 @@ scheduler = BackgroundScheduler()
 
 def remove_temp_videos():
     logger.info("=====================")
-    now = int(time.time())
-    cutoff = now - 600
+    current_time = int(time.time())
+    cutoff = current_time - 180
     for fname in os.listdir(TEMP_DIR):
         uploaded_time = 0
         logger.info("=========fname=======1===")
@@ -31,15 +31,13 @@ def remove_temp_videos():
             pass
         try:
             logger.info("=========fname=======3===")
-
-            ts_str = fname.split('_', 1)[0]
-            uploaded_time = int(ts_str)
+            uploaded_time = int(fname.split('_', 1)[0])
         except (ValueError, IndexError):
             logger.debug("Skipping non-timestamp file: %s", path)
             pass
-        logger.info(
-            f"===========uploaded_time================ {uploaded_time}")
-        logger.info(f"===========cutoff================ {cutoff}")
+        logger.info(f"===========uploaded_time================ {uploaded_time}")
+        logger.info(f"===========current_time================ {current_time}")
+        logger.info(f"===========cutoff= current_time - 180 ================ {cutoff}")
         if uploaded_time > 0 and uploaded_time <= cutoff:
             try:
                 os.remove(path)
