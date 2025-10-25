@@ -50,7 +50,7 @@ def upload_video(state: MainState):
 
 def summarize_video(state: MainState):
     uploaded_file = state["uploaded_file"]
-    prompt = "Generate a concise one-paragraph summary for this video."
+    prompt = "Generate a summary for this video."
     response = genai.GenerativeModel(
         "gemini-2.5-flash").generate_content([uploaded_file, prompt])
     return {"summary": response.text}
@@ -73,7 +73,7 @@ def summarize_video(state: MainState):
 #         content=[
 #             {
 #                 "type": "text",
-#                 "text": "describe what's in this video in a sentence",
+#                 "text": "Generate a summary for this video.",
 #             },
 #             {
 #                 "type": "video",
