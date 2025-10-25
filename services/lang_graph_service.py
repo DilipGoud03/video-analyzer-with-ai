@@ -45,7 +45,7 @@ def upload_video(state: MainState):
 def summarize_video(state: MainState):
     genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
     uploaded_file = state["uploaded_file"]
-    prompt = "Generate a summary for this video."
+    prompt = "Give me short summary of the uploaded video. Give me the summary in the bullet points with heading like video language, category is movie or song or cartoon, the audio and video is suitable for childer under 5 years of age or not."
     response = genai.GenerativeModel(
         "gemini-2.0-flash").generate_content([uploaded_file, prompt])
     return {"summary": response.text}
