@@ -60,7 +60,7 @@ def summarize_full_video():
         duration = streamlit.session_state["duration"]
         streamlit.write(f"**Duration:** {duration} seconds ({format_time(duration)})")
         summary = None
-        if streamlit.button("Summarize Entire Video"):
+        if streamlit.button("Summarize Full Video"):
             with streamlit.spinner("Generating summary..."):
                 summary = generate_summary(streamlit.session_state["save_path"])
 
@@ -87,8 +87,8 @@ def summarize_video_range():
         streamlit.write(
             f"Selected Range: {format_time(start_time)} → {format_time(end_time)}")
 
-        if streamlit.button("Preview Selected Range"):
-            with streamlit.spinner("Trimming video..."):
+        if streamlit.button("View Selected Range"):
+            with streamlit.spinner("Generating Selected Range video..."):
                 clip = VideoFileClip(streamlit.session_state["save_path"]).subclipped(
                     start_time, end_time)
                 temp_path = os.path.join(
@@ -96,15 +96,15 @@ def summarize_video_range():
                 clip.write_videofile(
                     temp_path, codec="libx264", audio_codec="aac", logger=None)
                 clip.close()
-                streamlit.session_state["trimmed_path"] = temp_path
+                streamlit.session_state["temp_video_path"] = temp_path
         summary = None
-        if streamlit.session_state.get("trimmed_path"):
-            streamlit.video(streamlit.session_state["trimmed_path"])
+        if streamlit.session_state.get("temp_video_path"):
+            streamlit.video(streamlit.session_state["temp_video_path"])
 
             if streamlit.button("Summarize Selected Range"):
                 with streamlit.spinner("Generating summary..."):
                     summary = generate_summary(
-                        streamlit.session_state["trimmed_path"])
+                        streamlit.session_state["temp_video_path"])
 
         # Display range summary if available
         if summary:
