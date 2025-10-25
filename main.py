@@ -5,6 +5,15 @@ from services.lang_graph_service import app
 import uuid
 import time
 
+from services.background_service import scheduler
+import atexit
+
+if "scheduler_started" not in st.session_state:
+    if not scheduler.running:
+        scheduler.start()
+    st.session_state["scheduler_started"] = True
+
+atexit.register(lambda: scheduler.shutdown(wait=False))
 
 
 SAVE_DIR = "org_videos"
@@ -34,7 +43,8 @@ save_path = None
 duration = 0
 uploaded_name = None
 trimmed_path = None
-uploaded_file = st.file_uploader("Choose a video file", type=["mp4"], help="upload you video file here")
+uploaded_file = st.file_uploader("Choose a video file", type=[
+                                 "mp4"], help="upload you video file here")
 
 # Handle new upload
 if uploaded_file and uploaded_file.name != st.session_state["uploaded_name"]:
@@ -75,13 +85,17 @@ if st.session_state.get("save_path"):
         help="Drag the sliders to choose the start and end times for the video segment you want to analyze."
     )
 
-    st.write(f"Selected Range: {format_time(start_time)} → {format_time(end_time)}")
+    st.write(
+        f"Selected Range: {format_time(start_time)} → {format_time(end_time)}")
 
     if st.button("Preview selected range"):
         with st.spinner("Trimming video..."):
-            clip = VideoFileClip(st.session_state["save_path"]).subclipped(start_time, end_time)
-            temp_path = os.path.join(TEMP_DIR, f"{int(time.time())}_{uuid.uuid4().hex}.mp4")
-            clip.write_videofile(temp_path, codec="libx264", audio_codec="aac", logger=None)
+            clip = VideoFileClip(st.session_state["save_path"]).subclipped(
+                start_time, end_time)
+            temp_path = os.path.join(
+                TEMP_DIR, f"{int(time.time())}_{uuid.uuid4().hex}.mp4")
+            clip.write_videofile(temp_path, codec="libx264",
+                                 audio_codec="aac", logger=None)
             clip.close()
             st.session_state["trimmed_path"] = temp_path
 
