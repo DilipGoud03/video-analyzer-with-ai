@@ -1,111 +1,133 @@
 import os
-import streamlit as st
-from moviepy.video.io.VideoFileClip import VideoFileClip
-from services.lang_graph_service import app
 import uuid
 import time
-
-from services.background_service import scheduler
 import atexit
-
-if "scheduler_started" not in st.session_state:
-    if not scheduler.running:
-        scheduler.start()
-    st.session_state["scheduler_started"] = True
-
-atexit.register(lambda: scheduler.shutdown(wait=False))
+import streamlit
+from moviepy.video.io.VideoFileClip import VideoFileClip
+from services.lang_graph_service import app
+from services.background_service import scheduler
 
 
 SAVE_DIR = "org_videos"
 TEMP_DIR = "temp_videos"
-os.makedirs(TEMP_DIR, exist_ok=True)
 os.makedirs(SAVE_DIR, exist_ok=True)
+os.makedirs(TEMP_DIR, exist_ok=True)
 
 
+# time formation
 def format_time(seconds: int) -> str:
     m = int(seconds) // 60
     s = int(seconds) % 60
     return f"{m}:{s:02d}"
 
 
-st.title("Video Analyzer")
+# Job
+def setup_scheduler():
+    if "scheduler_started" not in streamlit.session_state:
+        if not scheduler.running:
+            scheduler.start()
+        streamlit.session_state["scheduler_started"] = True
+        atexit.register(lambda: scheduler.shutdown(wait=False))
 
-if "save_path" not in st.session_state:
-    st.session_state["save_path"] = None
-if "duration" not in st.session_state:
-    st.session_state["duration"] = 0
-if "uploaded_name" not in st.session_state:
-    st.session_state["uploaded_name"] = None
-if "trimmed_path" not in st.session_state:
-    st.session_state["trimmed_path"] = None
 
-save_path = None
-duration = 0
-uploaded_name = None
-trimmed_path = None
-uploaded_file = st.file_uploader("Choose a video file", type=[
-                                 "mp4"], help="upload you video file here")
+# upload video
+def upload_video_section():
+    uploaded_file = streamlit.file_uploader("Choose a video file", type=[
+                                     "mp4"], help="Upload your video file here")
 
-# Handle new upload
-if uploaded_file and uploaded_file.name != st.session_state["uploaded_name"]:
-    st.session_state["save_path"] = None
-    st.session_state["duration"] = 0
-    st.session_state["uploaded_name"] = None
-    st.session_state["trimmed_path"] = None
-
-# Process uploaded video
-if uploaded_file is not None:
-    if st.button("Process Video"):
+    if uploaded_file and streamlit.button("Process Video"):
         save_path = os.path.join(SAVE_DIR, uploaded_file.name)
         with open(save_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
-        st.session_state["save_path"] = save_path
-        st.session_state["uploaded_name"] = uploaded_file.name
 
-        # Get video duration
         clip = VideoFileClip(save_path)
-        st.session_state["duration"] = int(clip.duration)
+        duration = int(clip.duration)
         clip.close()
 
+        streamlit.session_state["save_path"] = save_path
+        streamlit.session_state["duration"] = duration
 
-# If video is ready
-if st.session_state.get("save_path"):
-    st.video(st.session_state["save_path"])
-    duration = st.session_state["duration"]
-    st.write(
-        f"**Video duration:** {duration} seconds ({format_time(duration)})")
+    return streamlit.session_state.get("save_path"), streamlit.session_state.get("duration", 0)
 
-    # Time range slider
-    start_time, end_time = st.slider(
-        label="Select time range (in seconds)",
-        min_value=0,
-        max_value=duration,
-        value=(0, min(30, duration)),
-        step=1,
-        help="Drag the sliders to choose the start and end times for the video segment you want to analyze."
-    )
 
-    st.write(
-        f"Selected Range: {format_time(start_time)} → {format_time(end_time)}")
+# summarize full video
+def summarize_full_video():
+    if streamlit.session_state.get("save_path"):
+        streamlit.subheader("Full Video Summary")
 
-    if st.button("Preview selected range"):
-        with st.spinner("Trimming video..."):
-            clip = VideoFileClip(st.session_state["save_path"]).subclipped(
-                start_time, end_time)
-            temp_path = os.path.join(
-                TEMP_DIR, f"{int(time.time())}_{uuid.uuid4().hex}.mp4")
-            clip.write_videofile(temp_path, codec="libx264",
-                                 audio_codec="aac", logger=None)
-            clip.close()
-            st.session_state["trimmed_path"] = temp_path
+        streamlit.video(streamlit.session_state["save_path"])
 
-    # Summarize trimmed video
-    if st.session_state.get("trimmed_path"):
-        st.video(st.session_state["trimmed_path"])
-        if st.button("Summarize selected range"):
-            with st.spinner("Generating summary..."):
-                inputs = {
-                    "video_path": st.session_state["trimmed_path"]}
-                state = app.invoke(inputs)
-                if 'summary' in state:
-                    st.write(state['summary'])
+        duration = streamlit.session_state["duration"]
+        streamlit.write(f"**Duration:** {duration} seconds ({format_time(duration)})")
+        summary = None
+        if streamlit.button("Summarize Entire Video"):
+            with streamlit.spinner("Generating summary..."):
+                summary = generate_summary(streamlit.session_state["save_path"])
+
+        if summary:
+            streamlit.write("Summary")
+            streamlit.write(summary)
+
+
+# summarize video range
+def summarize_video_range():
+    if streamlit.session_state.get("save_path"):
+        streamlit.divider()
+        streamlit.subheader("Summarize Selected Range")
+
+        duration = streamlit.session_state["duration"]
+
+        start_time, end_time = streamlit.slider(
+            "Select time range (in seconds)",
+            min_value=0,
+            max_value=duration,
+            value=(0, min(30, duration)),
+            step=1
+        )
+        streamlit.write(
+            f"Selected Range: {format_time(start_time)} → {format_time(end_time)}")
+
+        if streamlit.button("Preview Selected Range"):
+            with streamlit.spinner("Trimming video..."):
+                clip = VideoFileClip(streamlit.session_state["save_path"]).subclipped(
+                    start_time, end_time)
+                temp_path = os.path.join(
+                    TEMP_DIR, f"{int(time.time())}_{uuid.uuid4().hex}.mp4")
+                clip.write_videofile(
+                    temp_path, codec="libx264", audio_codec="aac", logger=None)
+                clip.close()
+                streamlit.session_state["trimmed_path"] = temp_path
+        summary = None
+        if streamlit.session_state.get("trimmed_path"):
+            streamlit.video(streamlit.session_state["trimmed_path"])
+
+            if streamlit.button("Summarize Selected Range"):
+                with streamlit.spinner("Generating summary..."):
+                    summary = generate_summary(
+                        streamlit.session_state["trimmed_path"])
+
+        # Display range summary if available
+        if summary:
+            streamlit.write("Summary")
+            streamlit.write(summary)
+
+
+def generate_summary(path):
+    summary = 'summary not available'
+    inputs = {"video_path": path}
+    state = app.invoke(inputs)
+    if 'summary' in state:
+        summary = state['summary']
+    return summary
+
+
+def main():
+    streamlit.title("Video Analyzer")
+    setup_scheduler()
+    upload_video_section()
+    summarize_full_video()
+    summarize_video_range()
+
+
+if __name__ == "__main__":
+    main()
