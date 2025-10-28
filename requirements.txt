@@ -6,3 +6,7 @@ langchain-core
 langchain-google-genai 
 google-generativeai
 apscheduler
+mysql-connector-python
+python-decouple
+faiss-cpu
+sentence-transformers
