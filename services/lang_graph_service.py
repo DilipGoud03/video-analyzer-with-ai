@@ -1,18 +1,16 @@
 from typing import TypedDict, Optional
 from langgraph.graph import StateGraph, START, END
 import google.generativeai as genai
-from dotenv import load_dotenv
+from decouple import config
 import os
 import mimetypes
 
-load_dotenv()
 
 if "GOOGLE_API_KEY" not in os.environ:
-    os.environ["GOOGLE_API_KEY"] = "AIzaSyD0D5lO9oajtO-THvXKpMQy902QL8zGgFU"
+    os.environ["GOOGLE_API_KEY"] = config("GOOGLE_API_KEY")
 
 
 # Define the State
-
 class UploadedFile(TypedDict):
     mime_type: str
     data: bytes
@@ -22,6 +20,7 @@ class MainState(TypedDict):
     video_path: str
     uploaded_file: Optional[UploadedFile]
     summary: Optional[str]
+    prompt: Optional[str]
 
 
 # Define the Nodes
@@ -45,7 +44,10 @@ def upload_video(state: MainState):
 def summarize_video(state: MainState):
     genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
     uploaded_file = state["uploaded_file"]
-    prompt = "Give me short summary of the uploaded video. Give me the summary in the bullet points with heading like video language, category is movie or song or cartoon, the audio and video is suitable for childer under 5 years of age or not."
+    if 'prompt' in state and state['prompt'] != '':
+        prompt = state['prompt']
+    else:
+        prompt = "Give me short summary of the uploaded video. Give me the summary in the bullet points with heading like video language, category is movie or song or cartoon, the audio and video is suitable for childer under 5 years of age or not."
     response = genai.GenerativeModel(
         "gemini-2.0-flash").generate_content([uploaded_file, prompt])
     return {"summary": response.text}

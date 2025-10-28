@@ -1,0 +1,9 @@
+GOOGLE_API_KEY
+HOST
+USER
+PASSWORD
+DATABASE
+PORT
+
+TEMP_DIR=./temp_videos
+ORG_DIR=./org_videos
