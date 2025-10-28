@@ -11,35 +11,30 @@ ORG_DIR = config("ORG_DIR")
 
 st.header("Videos")
 
-st.session_state = {}
 
-
-def filter_videos():
+def filter_videos() -> list:
     search_val = st.session_state.get("search", "")
     category_val = st.session_state.get("category", "")
     return video_table.video_list(search_val, category_val)
 
 
+col3, col4 = st.columns([1, 1])
+with col3:
+    search = st.text_input(
+        "Search",
+        key="search",
+    )
+
+with col4:
+    category = st.selectbox(
+        "Category",
+        ["All", "Education", "Entertainment"],
+        key="category",
+    )
+
 video_files = [f for f in os.listdir(ORG_DIR) if f.endswith('.mp4')]
 results = filter_videos()
-if results:
-    col3, col4 = st.columns([1, 1])
-    with col3:
-        search = st.text_input(
-            "Search",
-            key="search",
-        )
-
-    with col4:
-        category = st.selectbox(
-            "Category",
-            ["All", "Education", "Entertainment"],
-            key="category",
-        )
-
-    st.session_state["search"] = search
-    st.session_state["category"] = category
-
+if len(results) > 0:
     if os.path.exists(ORG_DIR):
         for video_file in results:
             if video_file and video_file["video_name"] in video_files:

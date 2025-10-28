@@ -44,10 +44,13 @@ def upload_video(state: MainState):
 def summarize_video(state: MainState):
     genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
     uploaded_file = state["uploaded_file"]
+
+    prompt = "Provide a detailed and comprehensive description of this video. Your response must be in a natural human-readable format describing what happens in the video, including scenes, actions, objects, and emotions if visible. Do not include any introductory or meta phrases such as 'Okay, here is a detailed description of the video' or similar. Start directly with the description."
+    
     if 'prompt' in state and state['prompt'] != '':
-        prompt = state['prompt']
-    else:
-        prompt = "Give me short summary of the uploaded video. Give me the summary in the bullet points with heading like video language, category is movie or song or cartoon, the audio and video is suitable for childer under 5 years of age or not."
+        prompt = state['prompt'] + " Avoid adding introductory phrases like 'Here is the summary' or 'Okay, here’s the explanation'. Start directly with the summary content."
+
+    print(prompt)
     response = genai.GenerativeModel(
         "gemini-2.0-flash").generate_content([uploaded_file, prompt])
     return {"summary": response.text}
