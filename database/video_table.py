@@ -37,16 +37,19 @@ class VideoTableService:
 
             conditions = []
             if filter:
-                conditions.append("(`id` LIKE %s OR `video_name` LIKE %s OR `language` LIKE %s)")
+                query += " WHERE (`id` LIKE %s OR `video_name` LIKE %s OR `language` LIKE %s)"
                 search = f"%{filter}%"
                 values.extend([search, search, search])
 
             if category and category.lower() != "all":
-                conditions.append("`category` = %s")
+                if filter:
+                    query += " AND "
+                else:
+                    query += " WHERE "
+                
+                query += "`category` = %s"
+                
                 values.append(category)
-
-            if conditions:
-                query += " WHERE " + " AND ".join(conditions)
 
             with self.__db.cursor(dictionary=True) as cursor:
                 cursor.execute(query, tuple(values))

@@ -15,18 +15,16 @@ uploaded_file = st.file_uploader("Choose a video file", type=[
     "mp4"], help="Upload your video file here")
 
 if uploaded_file and st.button("Process Video"):
-    video_data = video_table.add_video(uploaded_file.name, 0)
-    if video_data:
-        save_path = os.path.join(ORG_DIR, uploaded_file.name)
-        open(save_path, "wb").write(uploaded_file.getbuffer())
-        clip = VideoFileClip(save_path)
-        duration = int(clip.duration)
-        clip.close()
+    video_table.add_video(uploaded_file.name, 0)
+    save_path = os.path.join(ORG_DIR, uploaded_file.name)
+    open(save_path, "wb").write(uploaded_file.getbuffer())
+    clip = VideoFileClip(save_path)
+    duration = int(clip.duration)
+    clip.close()
 
-        st.session_state["save_path"] = save_path
-        st.session_state["duration"] = duration
-    else:
-        st.warning("Please use diffrent name of this video")
+    st.session_state["save_path"] = save_path
+    st.session_state["duration"] = duration
+
 
 if st.session_state.get("save_path"):
     st.header("Full Video Summary")
