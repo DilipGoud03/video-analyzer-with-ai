@@ -8,3 +8,5 @@ google-generativeai
 apscheduler
 mysql-connector-python
 python-decouple
+faiss-cpu
+sentence-transformers

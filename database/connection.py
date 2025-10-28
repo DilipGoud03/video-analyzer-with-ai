@@ -7,17 +7,24 @@ load_dotenv()
 
 
 class Connection:
-    def __init__(self) -> None:
-        pass
+    def __init__(self):
+        self.__connection = None
 
     def connect_db(self):
-        try:
-            return mysql.connector.connect(
-                host=str(config("HOST")),
-                user=str(config("USER")),
-                password=str(config("PASSWORD")),
-                database=str(config("DATABASE")),
-                port=str(config("PORT"))
-            )
-        except Exception as e:
-            raise PermissionError(str(e))
+        if not self.__connection or not self.__connection.is_connected():
+            try:
+                self.__connection = mysql.connector.connect(
+                    host=config("HOST"),
+                    user=config("USER"),
+                    password=config("PASSWORD"),
+                    database=config("DATABASE"),
+                    port=config("PORT"),
+                    autocommit=True
+                )
+            except mysql.connector.Error as e:
+                raise ConnectionError(f"MySQL Connection Failed: {e}")
+        return self.__connection
+
+    def close_db(self):
+        if self.__connection and self.__connection.is_connected():
+            self.__connection.close()

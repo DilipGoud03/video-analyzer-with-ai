@@ -4,29 +4,29 @@ from moviepy.video.io.VideoFileClip import VideoFileClip
 from services.lang_graph_service import app
 from services.utility_service import UtilityService
 from database.video_table import VideoTableService
+from decouple import config
 
 video_table = VideoTableService()
 utility_service = UtilityService()
-st.session_state = {}
-SAVE_DIR = "org_videos"
+ORG_DIR = str(config("ORG_DIR"))
 st.header("Upload Video")
 
-uploaded_file = st.file_uploader("Choose a video file", type=[ 
+uploaded_file = st.file_uploader("Choose a video file", type=[
     "mp4"], help="Upload your video file here")
 
 if uploaded_file and st.button("Process Video"):
-    save_path = os.path.join(SAVE_DIR, uploaded_file.name)
-    with open(save_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
+    video_data = video_table.add_video(uploaded_file.name, 0)
+    if video_data:
+        save_path = os.path.join(ORG_DIR, uploaded_file.name)
+        open(save_path, "wb").write(uploaded_file.getbuffer())
+        clip = VideoFileClip(save_path)
+        duration = int(clip.duration)
+        clip.close()
 
-    clip = VideoFileClip(save_path)
-    duration = int(clip.duration)
-    clip.close()
-
-    video_table.add_video(uploaded_file.name, save_path, 0)
-
-    st.session_state["save_path"] = save_path
-    st.session_state["duration"] = duration
+        st.session_state["save_path"] = save_path
+        st.session_state["duration"] = duration
+    else:
+        st.warning("Please use diffrent name of this video")
 
 if st.session_state.get("save_path"):
     st.header("Full Video Summary")

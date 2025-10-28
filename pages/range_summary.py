@@ -4,11 +4,12 @@ import uuid
 import time
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from services.utility_service import UtilityService
+from decouple import config
 
 
 utility_service = UtilityService()
 
-TEMP_DIR = "temp_videos"
+TEMP_DIR = config("TEMP_DIR")
 st.header("Summarize Selected Range")
 
 if st.session_state.get("save_path"):
