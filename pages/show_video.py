@@ -3,6 +3,7 @@ from services.utility_service import UtilityService
 from datetime import timedelta
 
 utility_service = UtilityService()
+st.session_state["save_path"] = None
 
 
 if st.button("Back", key="back"):

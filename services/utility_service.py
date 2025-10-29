@@ -11,9 +11,9 @@ class UtilityService:
         s = int(seconds) % 60
         return f"{m}:{s:02d}"
 
-    def generate_summary(self, path, prompt=''):
+    def generate_summary(self, path, is_new_video: bool = False, prompt=''):
         summary = 'summary not available'
-        inputs = {"video_path": path, "prompt": prompt}
+        inputs = {"video_path": path, "is_new_video": is_new_video, "prompt": prompt}
         state = app.invoke(inputs)  # type:ignore
         if 'summary' in state:
             summary = state['summary']
@@ -27,7 +27,8 @@ class UtilityService:
             summary_type = st.radio(
                 "Summary Type:", ["Short summary", "Full explanation"])
 
-            summary_duration = st.number_input("Select Duration (in minutes):", min_value=0, value=1)
+            summary_duration = st.number_input(
+                "Select Duration (in minutes):", min_value=0, value=1)
 
         with col1:
             summary_bullet = st.checkbox("Show summary as bullet points")
@@ -37,17 +38,21 @@ class UtilityService:
         with col2:
             age = st.selectbox("Select Age Group:", ['5', '10', '15', '18+'])
             summary_language = st.selectbox(
-                "Summary Language:", ["Hindi", "English", "Hinglish", "Video Language"]
+                "Summary Language:", ["Hindi", "English",
+                                      "Hinglish", "Video Language"]
             )
 
         if summary_type:
-            prompt_parts.append(f"Generate a {summary_type.lower()} of the given video.")
+            prompt_parts.append(
+                f"Generate a {summary_type.lower()} of the given video.")
 
         if summary_duration:
-            prompt_parts.append(f"The summary should bee in {summary_duration} minute(s).")
+            prompt_parts.append(
+                f"The summary should bee in {summary_duration} minute(s).")
 
         if summary_language:
-            prompt_parts.append(f"Write the summary in {summary_language} language.")
+            prompt_parts.append(
+                f"Write the summary in {summary_language} language.")
 
         if age:
             prompt_parts.append(
@@ -70,4 +75,4 @@ class UtilityService:
             )
 
         combine_prompt = " ".join(prompt_parts)
-        return st.text_area("Generated Prompt", value=combine_prompt.strip(), height=180, help="Also you can create a custom prompt")
+        return st.text_area("Generated Prompt", value=combine_prompt.strip(), height=180, help="Also you can update this prompt")

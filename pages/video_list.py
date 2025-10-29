@@ -10,6 +10,8 @@ utility_service = UtilityService()
 ORG_DIR = config("ORG_DIR")
 
 st.header("Videos")
+st.session_state["show_video"] = None
+st.session_state["save_video"] = None
 
 
 def filter_videos() -> list:

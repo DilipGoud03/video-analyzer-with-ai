@@ -1,5 +1,5 @@
 .env
-venv
+video-analyzer-venv
 org_videos/*
 temp_videos/*
 /__pycache__
