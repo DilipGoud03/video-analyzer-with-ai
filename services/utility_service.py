@@ -11,13 +11,23 @@ class UtilityService:
         s = int(seconds) % 60
         return f"{m}:{s:02d}"
 
-    def generate_summary(self, path, prompt=''):
+    def generate_summary(self, path, video_name: str, is_new_video: bool, prompt='',):
         summary = 'summary not available'
-        inputs = {"video_path": path, "prompt": prompt}
+        inputs = {"video_path": path, "video_name": video_name,
+                  "is_new_video": is_new_video, "prompt": prompt}
         state = app.invoke(inputs)  # type:ignore
         if 'summary' in state:
             summary = state['summary']
         return summary
+
+    def generate_answer(self, path, video_name, question):
+        answer = ''
+        input = {"video_path": path,
+                 "video_name": video_name, "question": question}
+        state = app.invoke(input)
+        if 'answer' in state:
+            answer = state['answer']
+        return answer
 
     def custom_prompt(self):
         prompt_parts = []
@@ -27,7 +37,11 @@ class UtilityService:
             summary_type = st.radio(
                 "Summary Type:", ["Short summary", "Full explanation"])
 
-            summary_duration = st.number_input("Select Duration (in minutes):", min_value=0, value=1)
+            summary_duration = st.number_input(
+                "Select Duration (in minutes):",
+                min_value=0,
+                value=1
+            )
 
         with col1:
             summary_bullet = st.checkbox("Show summary as bullet points")
@@ -35,24 +49,47 @@ class UtilityService:
             detect_harmful_pictures = st.checkbox("Detect harmful visuals")
 
         with col2:
-            age = st.selectbox("Select Age Group:", ['5', '10', '15', '18+'])
+            age = st.selectbox(
+                "Select Age Group:",
+                [
+                    0,
+                    5,
+                    10,
+                    15,
+                    18,
+                    19
+                ]
+            )
+
             summary_language = st.selectbox(
-                "Summary Language:", ["Hindi", "English", "Hinglish", "Video Language"]
+                "Summary Language:", [
+                    "Hindi",
+                    "English",
+                    "Hinglish",
+                    "Video Language"
+                ]
             )
 
         if summary_type:
-            prompt_parts.append(f"Generate a {summary_type.lower()} of the given video.")
+            prompt_parts.append(
+                f"Generate a {summary_type.lower()} of the given video.")
 
         if summary_duration:
-            prompt_parts.append(f"The summary should bee in {summary_duration} minute(s).")
+            prompt_parts.append(
+                f"The summary should bee in {summary_duration} minute(s).")
 
         if summary_language:
-            prompt_parts.append(f"Write the summary in {summary_language} language.")
+            prompt_parts.append(
+                f"Write the summary in {summary_language} language.")
 
         if age:
-            prompt_parts.append(
-                f"Evaluate whether the video content (both audio and visuals) is appropriate for viewers under {age} years old."
-            )
+            if age <= 18:
+                prompt_parts.append(
+                    f"Evaluate whether the video content (both audio and visuals) is appropriate for viewers under {age} years old."
+                )
+            else:
+                prompt_parts.append(
+                    "Evaluate whether the video content (both audio and visuals) is appropriate for a general adult audience")
 
         if summary_bullet:
             prompt_parts.append(

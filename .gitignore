@@ -4,3 +4,4 @@ org_videos/*
 temp_videos/*
 /__pycache__
 */__pycache__
+database/vector_db/*

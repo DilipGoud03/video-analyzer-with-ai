@@ -10,7 +10,8 @@ utility_service = UtilityService()
 ORG_DIR = config("ORG_DIR")
 
 st.header("Videos")
-
+st.session_state["show_video"] = None
+st.session_state["summary"] = None
 
 def filter_videos() -> list:
     search_val = st.session_state.get("search", "")
@@ -58,6 +59,7 @@ if len(results) > 0:
                 with col2:
                     if st.button("Show Video", key=f"show_video_{video_file['id']}"):
                         st.session_state["show_video"] = video_path
+                        st.session_state["show_video_name"] = video_file['video_name']
                         st.session_state["duration"] = duration
                         st.switch_page("pages/show_video.py")
     else:

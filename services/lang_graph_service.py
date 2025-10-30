@@ -1,70 +1,177 @@
 from typing import TypedDict, Optional
 from langgraph.graph import StateGraph, START, END
-import google.generativeai as genai
 from decouple import config
 import os
 import mimetypes
+from langchain_chroma import Chroma
+from langchain_google_genai import (
+    GoogleGenerativeAIEmbeddings,
+    ChatGoogleGenerativeAI
+)
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.documents import Document
+from langchain_core.messages import HumanMessage
+import base64
 
 
 if "GOOGLE_API_KEY" not in os.environ:
-    os.environ["GOOGLE_API_KEY"] = config("GOOGLE_API_KEY")
+    os.environ["GOOGLE_API_KEY"] = str(config("GOOGLE_API_KEY"))
+
+llm = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash",
+    temperature=0,
+    max_output_tokens=None,
+    timeout=None,
+    max_retries=2,
+)
 
 
-# Define the State
+class VectorStoreService:
+    def __init__(self):
+        os.makedirs(str(config("VECTOR_DB_DIR")), exist_ok=True)
+        self.__embeddings = GoogleGenerativeAIEmbeddings(
+            model="models/embedding-001"
+        )
+
+    def vector_db(self):
+        return Chroma(
+            collection_name="video_summaries",
+            embedding_function=self.__embeddings,
+            persist_directory=str(config("VECTOR_DB_DIR")),
+        )
+
+
 class UploadedFile(TypedDict):
     mime_type: str
     data: bytes
 
 
 class MainState(TypedDict):
-    video_path: str
+    video_path: Optional[str]
+    video_name: str
     uploaded_file: Optional[UploadedFile]
     summary: Optional[str]
+    is_new_video: bool
     prompt: Optional[str]
+    question: Optional[str]
+    answer: Optional[str]
 
-
-# Define the Nodes
 def upload_video(state: MainState):
-    path = state["video_path"]
-    try:
-        mime_type, _ = mimetypes.guess_type(path) if path else "video/mp4"
-        video_bytes = open(path, "rb").read()
+    path = state.get("video_path")
+    if not path or not os.path.exists(path):
+        raise FileNotFoundError("Video path not provided or invalid")
 
-        uploaded_file = {
-            "mime_type": mime_type,
-            "data": video_bytes
-        }
+    mime_type, _ = mimetypes.guess_type(path)
+    mime_type = mime_type or "video/mp4"
 
-        return {"uploaded_file": uploaded_file}
-    except Exception as e:
-        print(f"Error loading video: {e}")
-        raise
+    with open(path, "rb") as f:
+        video_bytes = f.read()
+
+    return {"uploaded_file": {"mime_type": mime_type, "data": video_bytes}}
 
 
 def summarize_video(state: MainState):
-    genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
     uploaded_file = state["uploaded_file"]
 
-    prompt = "Provide a detailed and comprehensive description of this video. Your response must be in a natural human-readable format describing what happens in the video, including scenes, actions, objects, and emotions if visible. Do not include any introductory or meta phrases such as 'Okay, here is a detailed description of the video' or similar. Start directly with the description."
-    
+    prompt = """
+            Provide a detailed and comprehensive description of this video. 
+            Your response must be in a natural human-readable format describing what happens in the video, including scenes, actions, objects, and emotions if visible. 
+        """
+    # Do not include any introductory or meta phrases such as 'Okay, here is a detailed description of the video' or similar. Start directly with the description.
+
     if 'prompt' in state and state['prompt'] != '':
-        prompt = state['prompt'] + " Avoid adding introductory phrases like 'Here is the summary' or 'Okay, here’s the explanation'. Start directly with the summary content."
+        prompt = f"{state['prompt']}"
 
-    print(prompt)
-    response = genai.GenerativeModel(
-        "gemini-2.0-flash").generate_content([uploaded_file, prompt])
-    return {"summary": response.text}
+        # Avoid adding introductory phrases like 'Here is the summary' or 'Okay, here’s the explanation'. Start directly with the summary content.
+
+    encoded_video = base64.b64encode(uploaded_file["data"]).decode("utf-8")
+    message = HumanMessage(
+        content=[
+            {
+                "type": "text",
+                "text": prompt
+            },
+            {
+                "type": "media",
+                "data": encoded_video,
+                "mime_type": uploaded_file["mime_type"]
+            },
+        ]
+    )
+    response = llm.invoke([message])
+    return {"summary": response.content}
 
 
-# Build the Pipline
+def store_summary_in_db(state: MainState):
+    if state.get("is_new_video") and state["is_new_video"] == True:
+        try:
+            vector_service = VectorStoreService()
+            vector_db = vector_service.vector_db()
+            doc = Document(
+                page_content=state["summary"],
+                metadata={
+                    "video_name": state["video_name"],
+                    "path": state.get("video_path", ""),
+                },
+            )
+            vector_db.add_documents([doc])
+        except Exception as e:
+            pass
+            print(f"Error saving summary: {e}")
+    return {}
 
-pipline = StateGraph(MainState)
 
-pipline.add_node("upload_video", upload_video)
-pipline.add_node("summarize_video", summarize_video)
+def ask_question(state: MainState):
+    question = state.get("question")
+    video_name = state.get("video_name")
 
-pipline.add_edge(START, "upload_video")
-pipline.add_edge("upload_video", "summarize_video")
-pipline.add_edge("summarize_video", END)
+    if not question:
+        return {"answer": "No question provided."}
 
-app = pipline.compile()
+    vector_service = VectorStoreService()
+    vector_db = vector_service.vector_db()
+
+    filter_query = {"video_name": video_name} if video_name else None
+    docs = vector_db.similarity_search(question, k=3, filter=filter_query)
+
+    if not docs:
+        return {"answer": f"No stored summary found for video '{video_name}'. Please summarize first."}
+
+    context = "\n---\n".join([doc.page_content for doc in docs])
+    prompt = (
+        f"The following are summaries of a video:\n{context}\n\n"
+        f"Based on this information, answer the question:\n{question}\n\n"
+        "Give a precise and factual answer."
+    )
+
+    response = llm.invoke(prompt)
+    return {"answer": getattr(response, "content", str(response))}
+
+
+def route_start(state: MainState) -> str:
+    if state.get("question"):
+        return "ask_question"
+    return "upload_video"
+
+
+pipeline = StateGraph(MainState)
+
+pipeline.add_node("upload_video", upload_video)
+pipeline.add_node("summarize_video", summarize_video)
+pipeline.add_node("store_summary_in_db", store_summary_in_db)
+pipeline.add_node("ask_question", ask_question)
+
+pipeline.add_conditional_edges(
+    START,
+    route_start,
+    {
+        "upload_video": "upload_video",
+        "ask_question": "ask_question",
+    },
+)
+pipeline.add_edge("upload_video", "summarize_video")
+pipeline.add_edge("summarize_video", "store_summary_in_db")
+pipeline.add_edge("store_summary_in_db", END)
+pipeline.add_edge("ask_question", END)
+
+app = pipeline.compile()
