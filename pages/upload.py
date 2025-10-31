@@ -13,6 +13,7 @@ st.header("Upload Video")
 
 st.session_state["show_video"] = None
 st.session_state["summary"] = None
+st.session_state["qa_listing"] = []
 
 uploaded_file = st.file_uploader("Choose a video file", type=[
     "mp4"], help="Upload your video file here")

@@ -125,7 +125,7 @@ def ask_question(state: MainState):
     question = state.get("question")
     video_name = state.get("video_name")
 
-    if not question:
+    if question:
         return {"answer": "No question provided."}
 
     vector_service = VectorStoreService()

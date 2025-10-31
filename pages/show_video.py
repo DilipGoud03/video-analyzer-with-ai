@@ -1,10 +1,12 @@
 import streamlit as st
 from services.utility_service import UtilityService
-from datetime import timedelta
-
 utility_service = UtilityService()
 
-st.session_state["summary"] = None
+# Initialize session state
+if "qa_listing" not in st.session_state:
+    st.session_state["qa_listing"] = []
+if "question_input" not in st.session_state:
+    st.session_state["question_input"] = ""
 
 if st.button("Back", key="back"):
     st.switch_page("pages/video_list.py")
@@ -12,9 +14,10 @@ if st.button("Back", key="back"):
 st.divider()
 if st.session_state.get("show_video"):
     st.video(st.session_state["show_video"])
+    st.write(st.session_state.get('show_video_name', 'unknown'))
 
-    prompt = ''
-    if st.checkbox("Custom Prompt"):
+    prompt = ""
+    if st.checkbox("Use Custom Prompt"):
         prompt = utility_service.custom_prompt()
 
     summary = None
@@ -26,10 +29,28 @@ if st.session_state.get("show_video"):
         st.write("**Summary:**")
         st.write(summary)
 
-    question = st.text_input("Your above video")
-    if question:
-        with st.spinner("Please wait..."):
-            anwer = utility_service.generate_answer(
-                st.session_state["show_video"], st.session_state["show_video_name"], question)
+    st.divider()
+    st.write("Ask Questions About the Video")
+
+    if st.session_state["qa_listing"]:
+        with st.container(height=300):
+            for qa in st.session_state["qa_listing"]:
+                col1, col2 = st.columns([1, 2])
+                with col1:
+                    st.write(f"{qa['question']}")
+                with col2:
+                    st.write("")
+                    st.write(qa['answer'])
+                st.divider()
+
+    # Text input
+    st.text_input(
+        "Type your question here:",
+        placeholder="e.g., What is the main topic discussed in the video?",
+        key="question_input",
+        on_change=utility_service.handle_question_submit
+    )
 else:
-    st.info("No videos selected yet. Go to 'Video List' click any one 'Show video'")
+    st.warning(
+        "No video selected yet. Go to **Video List** and click any video to view it."
+    )
