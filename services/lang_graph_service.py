@@ -74,13 +74,11 @@ def summarize_video(state: MainState):
     prompt = """
             Provide a detailed and comprehensive description of this video. 
             Your response must be in a natural human-readable format describing what happens in the video, including scenes, actions, objects, and emotions if visible. 
+            Do not include any introductory or meta phrases such as 'Okay, here is a detailed description of the video' or similar. Start directly with the description.
         """
-    # Do not include any introductory or meta phrases such as 'Okay, here is a detailed description of the video' or similar. Start directly with the description.
-
+    
     if 'prompt' in state and state['prompt'] != '':
-        prompt = f"{state['prompt']}"
-
-        # Avoid adding introductory phrases like 'Here is the summary' or 'Okay, here’s the explanation'. Start directly with the summary content.
+        prompt = f"{state['prompt']} Avoid adding introductory phrases like 'Here is the summary' or 'Okay, here’s the explanation'. Start directly with the summary content."
 
     encoded_video = base64.b64encode(uploaded_file["data"]).decode("utf-8")
     message = HumanMessage(
