@@ -3,10 +3,10 @@ moviepy
 langgraph
 langchain 
 langchain-core 
+langchain-community
 langchain-google-genai 
-google-generativeai
 apscheduler
 mysql-connector-python
 python-decouple
-faiss-cpu
-sentence-transformers
+langchain-chroma
+chromadb
