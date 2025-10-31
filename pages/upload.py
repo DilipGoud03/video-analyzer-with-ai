@@ -10,6 +10,7 @@ video_table = VideoTableService()
 utility_service = UtilityService()
 ORG_DIR = str(config("ORG_DIR"))
 st.header("Upload Video")
+st.session_state["show_video"] = None
 
 st.session_state["show_video"] = None
 st.session_state["summary"] = None

@@ -56,6 +56,7 @@ class MainState(TypedDict):
     question: Optional[str]
     answer: Optional[str]
 
+
 def upload_video(state: MainState):
     path = state.get("video_path")
     if not path or not os.path.exists(path):
@@ -76,13 +77,11 @@ def summarize_video(state: MainState):
     prompt = """
             Provide a detailed and comprehensive description of this video. 
             Your response must be in a natural human-readable format describing what happens in the video, including scenes, actions, objects, and emotions if visible. 
+            Do not include any introductory or meta phrases such as 'Okay, here is a detailed description of the video' or similar. Start directly with the description.
         """
-    # Do not include any introductory or meta phrases such as 'Okay, here is a detailed description of the video' or similar. Start directly with the description.
 
     if 'prompt' in state and state['prompt'] != '':
-        prompt = f"{state['prompt']}"
-
-        # Avoid adding introductory phrases like 'Here is the summary' or 'Okay, here’s the explanation'. Start directly with the summary content.
+        prompt = f"{state['prompt']} Avoid adding introductory phrases like 'Here is the summary' or 'Okay, here’s the explanation'. Start directly with the summary content."
 
     encoded_video = base64.b64encode(uploaded_file["data"]).decode("utf-8")
     message = HumanMessage(
@@ -125,7 +124,7 @@ def ask_question(state: MainState):
     question = state.get("question")
     video_name = state.get("video_name")
 
-    if question:
+    if not question:
         return {"answer": "No question provided."}
 
     vector_service = VectorStoreService()
@@ -161,6 +160,7 @@ pipeline.add_node("summarize_video", summarize_video)
 pipeline.add_node("store_summary_in_db", store_summary_in_db)
 pipeline.add_node("ask_question", ask_question)
 
+# Define flow
 pipeline.add_conditional_edges(
     START,
     route_start,
@@ -172,6 +172,5 @@ pipeline.add_conditional_edges(
 pipeline.add_edge("upload_video", "summarize_video")
 pipeline.add_edge("summarize_video", "store_summary_in_db")
 pipeline.add_edge("store_summary_in_db", END)
-pipeline.add_edge("ask_question", END)
 
 app = pipeline.compile()

@@ -108,18 +108,3 @@ class UtilityService:
 
         combine_prompt = " ".join(prompt_parts)
         return st.text_area("Generated Prompt", value=combine_prompt.strip(), height=180, help="Also you can create a custom prompt")
-
-
-    def handle_question_submit(self):
-        question = st.session_state.question_input.strip()
-        if question:
-            with st.spinner("Generating answer..."):
-                answer = self.generate_answer(
-                    st.session_state["show_video"],
-                    st.session_state.get("show_video_name", "video.mp4"),
-                    question,
-                )
-            st.session_state.qa_listing.append(
-                {"question": question, "answer": answer}
-            )
-            st.session_state.question_input = ""

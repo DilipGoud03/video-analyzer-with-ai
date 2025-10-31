@@ -7,3 +7,4 @@ PORT
 
 TEMP_DIR=./temp_videos
 ORG_DIR=./org_videos
+VECTOR_DB_DIR=./database/vector_db
