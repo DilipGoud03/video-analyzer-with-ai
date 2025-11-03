@@ -39,9 +39,8 @@ class UtilityService:
     # Generates an answer to a question related to the video content using stored summaries.
     def generate_answer(self, path, video_name, question):
         answer = ''
-        print("==========question==============", question)
         input = {"video_path": path, "video_name": video_name, "question": question}
-        state = app.invoke(input, self.__user_config)
+        state = app.invoke(input)
         if 'answer' in state:
             answer = state['answer']
         return answer
