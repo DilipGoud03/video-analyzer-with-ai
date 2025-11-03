@@ -8,7 +8,11 @@ import streamlit as st
 # answering questions about videos, and creating custom prompts for the model.
 class UtilityService:
     def __init__(self) -> None:
-        pass
+        self.__user_config = {
+            "configurable": {
+                "thread_id": st.session_state.get("user_name", "12312")
+            }
+        }
 
     # Function: format_time
     # ---------------------
@@ -35,9 +39,9 @@ class UtilityService:
     # Generates an answer to a question related to the video content using stored summaries.
     def generate_answer(self, path, video_name, question):
         answer = ''
-        input = {"video_path": path,
-                 "video_name": video_name, "question": question}
-        state = app.invoke(input)
+        print("==========question==============", question)
+        input = {"video_path": path, "video_name": video_name, "question": question}
+        state = app.invoke(input, self.__user_config)
         if 'answer' in state:
             answer = state['answer']
         return answer

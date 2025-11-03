@@ -78,6 +78,7 @@ if len(results) > 0:
 
                 # Display video name and duration
                 with col1:
+                    
                     st.write(f"**Name:** {video_file['video_name']}")
                     try:
                         clip = VideoFileClip(video_path)

@@ -5,6 +5,7 @@ import atexit
 import os
 from decouple import config
 
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -13,12 +14,12 @@ if not os.environ.get("GOOGLE_API_KEY"):
     os.environ["GOOGLE_API_KEY"] = str(config("GOOGLE_API_KEY"))
 
 
-# Initialize and start background scheduler (only once per session)
-if "scheduler_started" not in st.session_state:
-    if not scheduler.running:
-        scheduler.start()
-    st.session_state["scheduler_started"] = True
-    atexit.register(lambda: scheduler.shutdown(wait=False))
+# # Initialize and start background scheduler (only once per session)
+# if "scheduler_started" not in st.session_state:
+#     if not scheduler.running:
+#         scheduler.start()
+#     st.session_state["scheduler_started"] = True
+#     atexit.register(lambda: scheduler.shutdown(wait=False))
 
 
 # Define Streamlit pages

@@ -1,50 +1,20 @@
+from langgraph.checkpoint.memory import MemorySaver
 from typing import TypedDict, Optional
 from langgraph.graph import StateGraph, START, END
 from decouple import config
 import os
 import mimetypes
-from langchain_chroma import Chroma
-from langchain_google_genai import (
-    GoogleGenerativeAIEmbeddings,
-    ChatGoogleGenerativeAI
-)
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains.retrieval import create_retrieval_chain
 import base64
+from services.vector_store_service import VectorStoreService
 
-
-# Configure Google API key if not already set
-if "GOOGLE_API_KEY" not in os.environ:
-    os.environ["GOOGLE_API_KEY"] = str(config("GOOGLE_API_KEY"))
-
-# Initialize Google Gemini LLM
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    temperature=0,
-    max_output_tokens=None,
-    timeout=None,
-    max_retries=2,
-)
-
-
-# Class: VectorStoreService
-# -------------------------
-# Manages vector database connections and embedding initialization
-# using Google Generative AI embeddings and Chroma for persistence.
-class VectorStoreService:
-    def __init__(self):
-        os.makedirs(str(config("VECTOR_DB_DIR")), exist_ok=True)
-        self.__embeddings = GoogleGenerativeAIEmbeddings(
-            model="models/embedding-001"
-        )
-
-    def vector_db(self):
-        return Chroma(
-            collection_name="video_summaries",
-            embedding_function=self.__embeddings,
-            persist_directory=str(config("VECTOR_DB_DIR")),
-        )
+# Initialize vector store service
+vector_service = VectorStoreService()
+llm = vector_service.llm()
 
 
 # TypedDict: UploadedFile
@@ -93,7 +63,6 @@ def upload_video(state: MainState):
 # human-readable summary of the content.
 def summarize_video(state: MainState):
     uploaded_file = state["uploaded_file"]
-
     prompt = """
             Provide a detailed and comprehensive description of this video. 
             Your response must be in a natural human-readable format describing what happens in the video, including scenes, actions, objects, and emotions if visible. 
@@ -107,7 +76,8 @@ def summarize_video(state: MainState):
     message = HumanMessage(
         content=[
             {"type": "text", "text": prompt},
-            {"type": "media", "data": encoded_video, "mime_type": uploaded_file["mime_type"]},
+            {"type": "media", "data": encoded_video,
+                "mime_type": uploaded_file["mime_type"]},
         ]
     )
     response = llm.invoke([message])
@@ -119,10 +89,9 @@ def summarize_video(state: MainState):
 # Stores the generated video summary in the vector database
 # for future retrieval and similarity search.
 def store_summary_in_db(state: MainState):
+    vector_db = vector_service.vector_db()
     if state.get("is_new_video") and state["is_new_video"] == True:
         try:
-            vector_service = VectorStoreService()
-            vector_db = vector_service.vector_db()
             doc = Document(
                 page_content=state["summary"],
                 metadata={
@@ -148,10 +117,8 @@ def ask_question(state: MainState):
     if not question:
         return {"answer": "No question provided."}
 
-    vector_service = VectorStoreService()
     vector_db = vector_service.vector_db()
-
-    filter_query = {"video_name": video_name} if video_name else None
+    filter_query = {"video_name": video_name}
     docs = vector_db.similarity_search(question, k=3, filter=filter_query)
 
     if not docs:
@@ -166,6 +133,22 @@ def ask_question(state: MainState):
 
     response = llm.invoke(prompt)
     return {"answer": getattr(response, "content", str(response))}
+
+    # retriever = vector_db.as_retriever(search_kwargs={'filter': filter_query})
+    # rag_prompt = ChatPromptTemplate.from_messages([
+    #     ("system",
+    #      "You are an intelligent AI assistant specialized in analyzing and summarizing video content. "
+    #      "Use only the provided context from the video transcript to answer questions. "
+    #      "If the answer is not explicitly found in the context, reply with 'The information is not available in the provided video context.'"),
+
+    #     ("human",
+    #      "Context:\n{context}\n\n"
+    #      "Question:\n{input}\n\n"
+    #      "Please provide a clear, professional, and factual answer.")
+    # ])
+
+    # combine_docs_chain = create_stuff_documents_chain(llm, rag_prompt)
+    # return create_retrieval_chain(retriever, combine_docs_chain)
 
 
 # Function: route_start
@@ -201,5 +184,5 @@ pipeline.add_edge("upload_video", "summarize_video")
 pipeline.add_edge("summarize_video", "store_summary_in_db")
 pipeline.add_edge("store_summary_in_db", END)
 
-# Compile final LangGraph app
+pipeline.add_edge('ask_question', END)
 app = pipeline.compile()

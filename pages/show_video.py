@@ -53,7 +53,8 @@ if st.session_state.get("show_video"):
     # Display video metadata such as name and duration
     col5, col6 = st.columns([1, 1])
     with col5:
-        st.write(f"**VIDEO:** {st.session_state.get('show_video_name', 'unknown')}")
+        st.write(
+            f"**VIDEO:** {st.session_state.get('show_video_name', 'unknown')}")
     with col6:
         st.write(f"**DURATION:** {st.session_state.get('duration', 0)}")
 
