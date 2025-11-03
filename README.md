@@ -24,20 +24,6 @@ All of this is wrapped inside a **Streamlit** UI for a seamless user experience.
 - ⚡ **Streamlit Frontend** – Simple and modern web interface.  
 - 🔐 **Environment-Based Config** – Plug in your OpenAI, Gemini, and Serper keys easily.  
 
----
-
-## 🛠️ Technologies Used
-|-----------|------------------|
-| **Language** | Python 3.10+ |
-| **Framework** | Streamlit |
-| **AI / NLP** | LangChain, LangGraph, OpenAI, Google Gemini |
-| **Search & Context** | Haystack, SerperDev WebSearch |
-| **Embeddings** | Google Generative AI, OpenAI Embeddings |
-| **Utilities** | Pandas, dotenv, OS |
-| **Environment** | `.env` for configuration |
-
----
-
 ## LangChain + LangGraph Integration
 
 LangChain provides the core building blocks for LLM interactions (prompts, chains, and tools).  
