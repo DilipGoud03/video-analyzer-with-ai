@@ -30,15 +30,15 @@ LangChain provides the core building blocks for LLM interactions (prompts, chain
 **LangGraph** orchestrates these blocks into a **graph-based workflow**, making multi-step reasoning and tool execution seamless.
 
 ### Example Flow
-   Video Input
-    ↓
-    Transcription Node
-    ↓
-    Summarization Node (LangChain)
-    ↓
-    Q&A Node (LangGraph Conditional Edge)
-    ↓
-    Result → Display on Streamlit
+Video Input
+→
+Transcription Node
+→
+Summarization Node (LangChain)
+→
+Q&A Node (LangGraph Conditional Edge)
+→
+Result → Display on Streamlit
 
 
 ## 🛠️ Tech Stack
