@@ -14,9 +14,11 @@ from langchain_core.messages import HumanMessage
 import base64
 
 
+# Configure Google API key if not already set
 if "GOOGLE_API_KEY" not in os.environ:
     os.environ["GOOGLE_API_KEY"] = str(config("GOOGLE_API_KEY"))
 
+# Initialize Google Gemini LLM
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     temperature=0,
@@ -26,6 +28,10 @@ llm = ChatGoogleGenerativeAI(
 )
 
 
+# Class: VectorStoreService
+# -------------------------
+# Manages vector database connections and embedding initialization
+# using Google Generative AI embeddings and Chroma for persistence.
 class VectorStoreService:
     def __init__(self):
         os.makedirs(str(config("VECTOR_DB_DIR")), exist_ok=True)
@@ -41,11 +47,17 @@ class VectorStoreService:
         )
 
 
+# TypedDict: UploadedFile
+# -----------------------
+# Represents an uploaded file with MIME type and binary data.
 class UploadedFile(TypedDict):
     mime_type: str
     data: bytes
 
 
+# TypedDict: MainState
+# --------------------
+# Defines the shared state for the LangGraph workflow.
 class MainState(TypedDict):
     video_path: Optional[str]
     video_name: str
@@ -57,6 +69,10 @@ class MainState(TypedDict):
     answer: Optional[str]
 
 
+# Function: upload_video
+# ----------------------
+# Reads a video file from the given path and prepares it for processing
+# by encoding it into bytes and storing metadata such as MIME type.
 def upload_video(state: MainState):
     path = state.get("video_path")
     if not path or not os.path.exists(path):
@@ -71,6 +87,10 @@ def upload_video(state: MainState):
     return {"uploaded_file": {"mime_type": mime_type, "data": video_bytes}}
 
 
+# Function: summarize_video
+# -------------------------
+# Sends the uploaded video to the Gemini model to generate a detailed
+# human-readable summary of the content.
 def summarize_video(state: MainState):
     uploaded_file = state["uploaded_file"]
 
@@ -86,21 +106,18 @@ def summarize_video(state: MainState):
     encoded_video = base64.b64encode(uploaded_file["data"]).decode("utf-8")
     message = HumanMessage(
         content=[
-            {
-                "type": "text",
-                "text": prompt
-            },
-            {
-                "type": "media",
-                "data": encoded_video,
-                "mime_type": uploaded_file["mime_type"]
-            },
+            {"type": "text", "text": prompt},
+            {"type": "media", "data": encoded_video, "mime_type": uploaded_file["mime_type"]},
         ]
     )
     response = llm.invoke([message])
     return {"summary": response.content}
 
 
+# Function: store_summary_in_db
+# -----------------------------
+# Stores the generated video summary in the vector database
+# for future retrieval and similarity search.
 def store_summary_in_db(state: MainState):
     if state.get("is_new_video") and state["is_new_video"] == True:
         try:
@@ -120,6 +137,10 @@ def store_summary_in_db(state: MainState):
     return {}
 
 
+# Function: ask_question
+# ----------------------
+# Answers user questions based on stored video summaries
+# using context retrieval and the Gemini model.
 def ask_question(state: MainState):
     question = state.get("question")
     video_name = state.get("video_name")
@@ -147,12 +168,19 @@ def ask_question(state: MainState):
     return {"answer": getattr(response, "content", str(response))}
 
 
+# Function: route_start
+# ---------------------
+# Determines the starting node for the graph based on
+# whether the user provided a question or a video upload.
 def route_start(state: MainState) -> str:
     if state.get("question"):
         return "ask_question"
     return "upload_video"
 
 
+# Workflow Definition
+# -------------------
+# Builds and compiles the LangGraph workflow for video processing.
 pipeline = StateGraph(MainState)
 
 pipeline.add_node("upload_video", upload_video)
@@ -160,7 +188,7 @@ pipeline.add_node("summarize_video", summarize_video)
 pipeline.add_node("store_summary_in_db", store_summary_in_db)
 pipeline.add_node("ask_question", ask_question)
 
-# Define flow
+# Define graph flow logic
 pipeline.add_conditional_edges(
     START,
     route_start,
@@ -173,4 +201,5 @@ pipeline.add_edge("upload_video", "summarize_video")
 pipeline.add_edge("summarize_video", "store_summary_in_db")
 pipeline.add_edge("store_summary_in_db", END)
 
+# Compile final LangGraph app
 app = pipeline.compile()

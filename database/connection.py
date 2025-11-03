@@ -2,14 +2,28 @@ import mysql.connector
 from decouple import config
 from dotenv import load_dotenv
 
-
+# Load environment variables from the .env file
 load_dotenv()
 
 
+# Class: Connection
+# -----------------
+# Handles all MySQL database connection operations.
+# - Connects to the database using credentials from environment variables.
+# - Reuses an existing connection if one is already open.
+# - Provides a method to safely close the connection.
 class Connection:
     def __init__(self):
+        # Initialize a private connection attribute (starts as None)
         self.__connection = None
 
+    # Function: connect_db
+    # --------------------
+    # Establishes a connection to the MySQL database.
+    # - Uses credentials (host, user, password, etc.) from environment variables.
+    # - Creates a new connection if not already connected.
+    # - Returns the active MySQL connection.
+    # - Raises a ConnectionError if the connection fails.
     def connect_db(self):
         if not self.__connection or not self.__connection.is_connected():
             try:
@@ -25,6 +39,9 @@ class Connection:
                 raise ConnectionError(f"MySQL Connection Failed: {e}")
         return self.__connection
 
+    # Function: close_db
+    # ------------------
+    # Safely closes the database connection if it is currently active.
     def close_db(self):
         if self.__connection and self.__connection.is_connected():
             self.__connection.close()

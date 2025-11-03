@@ -2,16 +2,26 @@ from services.lang_graph_service import app
 import streamlit as st
 
 
+# Class: UtilityService
+# ---------------------
+# Provides helper functions for formatting time, generating video summaries,
+# answering questions about videos, and creating custom prompts for the model.
 class UtilityService:
     def __init__(self) -> None:
         pass
 
+    # Function: format_time
+    # ---------------------
+    # Converts total seconds into "minutes:seconds" format.
     def format_time(self, seconds: int) -> str:
         m = int(seconds) // 60
         s = int(seconds) % 60
         return f"{m}:{s:02d}"
 
-    def generate_summary(self, path, video_name: str, is_new_video: bool, prompt='',):
+    # Function: generate_summary
+    # --------------------------
+    # Generates a detailed summary of the video by invoking the LangGraph workflow.
+    def generate_summary(self, path, video_name: str, is_new_video: bool, prompt=''):
         summary = 'summary not available'
         inputs = {"video_path": path, "video_name": video_name,
                   "is_new_video": is_new_video, "prompt": prompt}
@@ -20,6 +30,9 @@ class UtilityService:
             summary = state['summary']
         return summary
 
+    # Function: generate_answer
+    # -------------------------
+    # Generates an answer to a question related to the video content using stored summaries.
     def generate_answer(self, path, video_name, question):
         answer = ''
         input = {"video_path": path,
@@ -29,6 +42,10 @@ class UtilityService:
             answer = state['answer']
         return answer
 
+    # Function: custom_prompt
+    # -----------------------
+    # Builds a custom summary generation prompt based on user-selected preferences
+    # like summary type, duration, language, age group, and content filters.
     def custom_prompt(self):
         prompt_parts = []
         col0, col1, col2 = st.columns([2, 3, 1])
