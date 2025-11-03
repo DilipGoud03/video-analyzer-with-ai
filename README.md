@@ -1,4 +1,4 @@
-# 🎥 Video Analyzer with AI
+# Video Analyzer with AI
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
 ![Streamlit](https://img.shields.io/badge/Streamlit-App-red?logo=streamlit)
@@ -14,15 +14,15 @@ All of this is wrapped inside a **Streamlit** UI for a seamless user experience.
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
-- 🧠 **LangChain + LangGraph Pipeline** – Graph-based orchestration of video analysis stages.  
-- 🎬 **Automatic Summarization** – Extract concise summaries from video transcripts.  
-- 💬 **Q&A over Stored Context** – Ask questions about previously processed videos using **ChromaDB** for retrieval.  
-- 💾 **Persistent Memory** – Video summaries are embedded and stored for future re-querying.  
-- 🔍 **Optional Web Search** – Augment answers with external data (via SerperDev WebSearch).  
-- ⚡ **Streamlit Frontend** – Simple and modern web interface.  
-- 🔐 **Environment-Based Config** – Plug in your OpenAI, Gemini, and Serper keys easily.  
+- **LangChain + LangGraph Pipeline** – Graph-based orchestration of video analysis stages.  
+- **Automatic Summarization** – Extract concise summaries from video transcripts.  
+- **Q&A over Stored Context** – Ask questions about previously processed videos using **ChromaDB** for retrieval.  
+- **Persistent Memory** – Video summaries are embedded and stored for future re-querying.  
+- **Optional Web Search** – Augment answers with external data (via SerperDev WebSearch).  
+- **Streamlit Frontend** – Simple and modern web interface.  
+- **Environment-Based Config** – Plug in your OpenAI, Gemini, and Serper keys easily.  
 
 ## LangChain + LangGraph Integration
 
@@ -41,7 +41,7 @@ Q&A Node (LangGraph Conditional Edge)
 Result → Display on Streamlit
 
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Category | Tools / Libraries |
 |-----------|------------------|
@@ -53,7 +53,7 @@ Result → Display on Streamlit
 | **Embeddings** | GoogleGenerativeAIEmbeddings, OpenAIEmbeddings |
 | **Environment** | Python-dotenv, OS, Pandas |
 
-## ⚡ Installation
+## Installation
 
 1. **Clone this repo**
 
