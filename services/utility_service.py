@@ -1,6 +1,6 @@
-from services.lang_graph_service import app
 import streamlit as st
 
+from services.lang_graph_service import run
 
 # Class: UtilityService
 # ---------------------
@@ -8,7 +8,7 @@ import streamlit as st
 # answering questions about videos, and creating custom prompts for the model.
 class UtilityService:
     def __init__(self) -> None:
-        self.__user_config = {
+        self.__config = {
             "configurable": {
                 "thread_id": st.session_state.get("user_name", "12312")
             }
@@ -29,7 +29,7 @@ class UtilityService:
         summary = 'summary not available'
         inputs = {"video_path": path, "video_name": video_name,
                   "is_new_video": is_new_video, "prompt": prompt}
-        state = app.invoke(inputs)  # type:ignore
+        state = run(False).invoke(inputs)  # type:ignore
         if 'summary' in state:
             summary = state['summary']
         return summary
@@ -40,7 +40,7 @@ class UtilityService:
     def generate_answer(self, path, video_name, question):
         answer = ''
         input = {"video_path": path, "video_name": video_name, "question": question}
-        state = app.invoke(input)
+        state = run(True).invoke(input, self.__config)
         if 'answer' in state:
             answer = state['answer']
         return answer

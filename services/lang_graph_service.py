@@ -119,36 +119,19 @@ def ask_question(state: MainState):
 
     vector_db = vector_service.vector_db()
     filter_query = {"video_name": video_name}
-    docs = vector_db.similarity_search(question, k=3, filter=filter_query)
 
-    if not docs:
-        return {"answer": f"No stored summary found for video '{video_name}'. Please summarize first."}
+    retriever = vector_db.as_retriever(search_kwargs={'filter': filter_query})
+    rag_prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are an intelligent AI assistant..."),
+        ("human", "Context:\n{context}\n\nQuestion:\n{input}\n\n...")
+    ])
 
-    context = "\n---\n".join([doc.page_content for doc in docs])
-    prompt = (
-        f"The following are summaries of a video:\n{context}\n\n"
-        f"Based on this information, answer the question:\n{question}\n\n"
-        "Give a precise and factual answer."
-    )
-
-    response = llm.invoke(prompt)
-    return {"answer": getattr(response, "content", str(response))}
-
-    # retriever = vector_db.as_retriever(search_kwargs={'filter': filter_query})
-    # rag_prompt = ChatPromptTemplate.from_messages([
-    #     ("system",
-    #      "You are an intelligent AI assistant specialized in analyzing and summarizing video content. "
-    #      "Use only the provided context from the video transcript to answer questions. "
-    #      "If the answer is not explicitly found in the context, reply with 'The information is not available in the provided video context.'"),
-
-    #     ("human",
-    #      "Context:\n{context}\n\n"
-    #      "Question:\n{input}\n\n"
-    #      "Please provide a clear, professional, and factual answer.")
-    # ])
-
-    # combine_docs_chain = create_stuff_documents_chain(llm, rag_prompt)
-    # return create_retrieval_chain(retriever, combine_docs_chain)
+    combine_docs_chain = create_stuff_documents_chain(llm, rag_prompt)
+    retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
+    
+    # Invoke and return the answer
+    result = retrieval_chain.invoke({"input": question})
+    return {"answer": result["answer"]}
 
 
 # Function: route_start
@@ -185,4 +168,11 @@ pipeline.add_edge("summarize_video", "store_summary_in_db")
 pipeline.add_edge("store_summary_in_db", END)
 
 pipeline.add_edge('ask_question', END)
-app = pipeline.compile()
+
+
+def run(is_questioning: bool = False):
+    if is_questioning:
+        checkpointer = MemorySaver()
+        return pipeline.compile(checkpointer=checkpointer)
+    else:
+        return pipeline.compile()
