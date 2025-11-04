@@ -19,10 +19,9 @@ All of this is wrapped inside a **Streamlit** UI for a seamless user experience.
 - **LangChain + LangGraph Pipeline** – Graph-based orchestration of video analysis stages.  
 - **Automatic Summarization** – Extract concise summaries from video transcripts.  
 - **Q&A over Stored Context** – Ask questions about previously processed videos using **ChromaDB** for retrieval.  
-- **Persistent Memory** – Video summaries are embedded and stored for future re-querying.  
-- **Optional Web Search** – Augment answers with external data (via SerperDev WebSearch).  
+- **Persistent Memory** – Video summaries are embedded and stored for future re-querying.   
 - **Streamlit Frontend** – Simple and modern web interface.  
-- **Environment-Based Config** – Plug in your OpenAI, Gemini, and Serper keys easily.  
+- **Environment-Based Config** – Plug in your OpenAI, Gemini, keys easily.  
 
 ## LangChain + LangGraph Integration
 
@@ -49,7 +48,6 @@ Result → Display on Streamlit
 | **Frontend** | Streamlit |
 | **AI / LLMs** | LangChain, LangGraph, OpenAI, Google Gemini |
 | **Vector Database** | ChromaDB |
-| **Web Search (optional)** | Haystack, SerperDev WebSearch |
 | **Embeddings** | GoogleGenerativeAIEmbeddings, OpenAIEmbeddings |
 | **Environment** | Python-dotenv, OS, Pandas |
 
