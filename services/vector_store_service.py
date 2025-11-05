@@ -45,7 +45,7 @@ class VectorStoreService:
     # ------------------------------------------------------------
     # Method: _delete_documents
     # Description:
-    #   Removes document embeddings from both Chroma stores.
+    #   Removes document embeddings from Chroma store.
     # ------------------------------------------------------------
     def _delete_documents(self, file_name):
         vector_store = self.vector_db()
@@ -61,8 +61,9 @@ class VectorStoreService:
     # ------------------------------------------------------------
     # Method: get_documents
     # Description:
-    #   Get All document embeddings from both Chroma stores.
+    #   Get All document embeddings from Chroma store.
     # ------------------------------------------------------------
     def get_documents(self):
         vector_store = self.vector_db()
+        print(vector_store.get())
         return True
