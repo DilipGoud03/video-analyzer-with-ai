@@ -11,7 +11,7 @@ from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains.retrieval import create_retrieval_chain
-
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from services.vector_store_service import VectorStoreService
 from services.llm_service import LLMService
 
@@ -118,14 +118,28 @@ def store_summary_in_db(state: MainState):
     vector_db = vector_service.vector_db()
     if state.get("is_new_video") and state["is_new_video"] is True:
         try:
-            doc = Document(
-                page_content=state["summary"],
-                metadata={
-                    "video_name": state["video_name"],
-                    "path": state.get("video_path", ""),
-                },
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=500,
+                chunk_overlap=50,
+                length_function=len,  # Measure by characters
+                # Try paragraph, line, word, character
+                separators=["\n\n", "\n", " ", ""]
             )
-            vector_db.add_documents([doc])
+            # Create chunks with metadata
+            chunks = text_splitter.split_text(state["summary"])
+            
+            docs = [
+                Document(
+                    page_content=chunk,
+                    metadata={
+                        "video_name": state["video_name"],
+                        "path": state.get("video_path", ""),
+                    }
+                )
+                for chunk in chunks
+            ]
+            
+            vector_db.add_documents(docs)
         except Exception as e:
             print(f"Error saving summary: {e}")
     return {}

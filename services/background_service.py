@@ -5,6 +5,7 @@ import logging
 import sys
 from database.video_table import VideoTableService
 from decouple import config
+from services.vector_store_service import VectorStoreService
 
 # ------------------------------------------------------------
 # Module: Video Cleanup Scheduler
@@ -110,6 +111,7 @@ def remove_unwanted_videos():
         if not video_data:
             try:
                 os.remove(path)
+                VectorStoreService()._delete_documents(fname)
                 logger.info("Removed unwanted video: %s", path)
             except OSError:
                 logger.exception("Failed to remove unwanted video: %s", path)

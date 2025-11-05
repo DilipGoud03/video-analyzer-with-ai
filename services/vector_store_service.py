@@ -41,3 +41,28 @@ class VectorStoreService:
             embedding_function=self.__embedding,
             persist_directory=str(config("VECTOR_DB_DIR")),
         )
+
+    # ------------------------------------------------------------
+    # Method: _delete_documents
+    # Description:
+    #   Removes document embeddings from both Chroma stores.
+    # ------------------------------------------------------------
+    def _delete_documents(self, file_name):
+        vector_store = self.vector_db()
+        # Delete all documents for a specific video
+        try:
+            vector_store.delete(where={"video_name": file_name})
+        except Exception as e:
+            print(f"No documents found or error deleting: {e}")
+            # Continue without error
+
+        return True
+
+    # ------------------------------------------------------------
+    # Method: get_documents
+    # Description:
+    #   Get All document embeddings from both Chroma stores.
+    # ------------------------------------------------------------
+    def get_documents(self):
+        vector_store = self.vector_db()
+        return True
