@@ -166,7 +166,9 @@ def ask_question(state: MainState):
 
     rag_prompt = ChatPromptTemplate.from_messages([
         ("system",
-         "You are an intelligent AI assistant. Use the following context to answer the question: {context}"),
+         "You are an intelligent AI assistant. Use the following context to answer the question directly and clearly. "
+         "Do not say things like 'Based on the provided text' or 'According to the context'.\n\n"
+         "Context:\n{context}"),
         ("human", "{input}")
     ])
 
