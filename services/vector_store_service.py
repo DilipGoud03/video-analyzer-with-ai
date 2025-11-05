@@ -14,13 +14,10 @@ class VectorStoreService:
     def __init__(self):
         os.makedirs(str(config("VECTOR_DB_DIR")), exist_ok=True)
         self.__embedding = LLMService().get_embedding_model()
-
+        self.__llm = LLMService().get_chat_model()
     def vector_db(self):
         return Chroma(
             collection_name="video_summaries",
             embedding_function=self.__embedding,
             persist_directory=str(config("VECTOR_DB_DIR")),
         )
-
-    def llm(self):
-        return LLMService().get_chat_model()

@@ -11,10 +11,11 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains.retrieval import create_retrieval_chain
 import base64
 from services.vector_store_service import VectorStoreService
+from services.llm_service import LLMService 
 
-# Initialize vector store service
+# Initialize vector store service and llm service
 vector_service = VectorStoreService()
-llm = vector_service.llm()
+llm = LLMService().get_chat_model()
 
 
 # TypedDict: UploadedFile
@@ -109,7 +110,7 @@ def store_summary_in_db(state: MainState):
 # Function: ask_question
 # ----------------------
 # Answers user questions based on stored video summaries
-# using context retrieval and the Gemini model.
+# using context retrieval and the AI model.
 def ask_question(state: MainState):
     question = state.get("question")
     video_name = state.get("video_name")
@@ -139,7 +140,7 @@ def ask_question(state: MainState):
 # Determines the starting node for the graph based on
 # whether the user provided a question or a video upload.
 def route_start(state: MainState) -> str:
-    if state.get("question"):
+    if state.get("question") and state['question'] != '':
         return "ask_question"
     return "upload_video"
 
@@ -170,6 +171,11 @@ pipeline.add_edge("store_summary_in_db", END)
 pipeline.add_edge('ask_question', END)
 
 
+# Function: run
+# ---------------------
+# Compiles the Langgraph based on condition.
+# whether the user provided a question use conversation history requestioning for provided answer.
+# And when ask for simple summary.
 def run(is_questioning: bool = False):
     if is_questioning:
         checkpointer = MemorySaver()
