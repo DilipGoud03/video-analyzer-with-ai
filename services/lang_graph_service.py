@@ -122,8 +122,8 @@ def ask_question(state: MainState):
 
     retriever = vector_db.as_retriever(search_kwargs={'filter': filter_query})
     rag_prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are an intelligent AI assistant..."),
-        ("human", "Context:\n{context}\n\nQuestion:\n{input}\n\n...")
+    ("system", "You are an intelligent AI assistant. Use the following context to answer the question: {context}"),
+    ("human", "{input}")
     ])
 
     combine_docs_chain = create_stuff_documents_chain(llm, rag_prompt)
