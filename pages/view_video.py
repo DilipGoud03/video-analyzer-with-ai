@@ -33,8 +33,8 @@ def handle_question_submit():
     question = st.session_state.question_input.strip()
     if question:
         answer = utility_service.generate_answer(
-            st.session_state["show_video"],
-            st.session_state.get("show_video_name", "video.mp4"),
+            st.session_state["view_video"],
+            st.session_state.get("video_name", "video.mp4"),
             question,
         )
         st.session_state.qa_listing.append(
@@ -47,15 +47,15 @@ def handle_question_submit():
 # -------------------------------------------
 # Displays the selected video, shows details, and allows summary generation.
 st.divider()
-if st.session_state.get("show_video"):
+if st.session_state.get("view_video"):
     # Display the selected video
-    st.video(st.session_state["show_video"])
+    st.video(st.session_state["view_video"])
 
     # Display video metadata such as name and duration
     col5, col6 = st.columns([1, 1])
     with col5:
         st.write(
-            f"**VIDEO:** {st.session_state.get('show_video_name', 'unknown')}")
+            f"**VIDEO:** {st.session_state.get('video_name', 'unknown')}")
     with col6:
         st.write(f"**DURATION:** {st.session_state.get('duration', 0)}")
 
@@ -74,8 +74,8 @@ if st.session_state.get("show_video"):
         if st.button("Summary"):
             with st.spinner("Generating summary..."):
                 summary = utility_service.generate_summary(
-                    st.session_state["show_video"],
-                    st.session_state["show_video_name"],
+                    st.session_state["view_video"],
+                    st.session_state["video_name"],
                     False,
                     prompt,
                 )
@@ -84,8 +84,8 @@ if st.session_state.get("show_video"):
     with col1:
         if st.checkbox("Custom Time Range Summary", help="Generate a summary for a specific time duration"):
             summary = video_range_summary.video_range_summary(
-                st.session_state["show_video"],
-                st.session_state["show_video_name"],
+                st.session_state["view_video"],
+                st.session_state["video_name"],
                 prompt,
             )
 
@@ -104,10 +104,10 @@ if st.session_state.get("show_video"):
     if st.session_state["qa_listing"]:
         with st.container(height=300):
             for qa in st.session_state["qa_listing"]:
-                with st.chat_message("human"):
+                with st.chat_message("user"):
                     st.write(qa['question'])
                 
-                with st.chat_message("ai"):
+                with st.chat_message("assistant"):
                     st.write(qa["answer"])
 
     # Text Input: User Question Field

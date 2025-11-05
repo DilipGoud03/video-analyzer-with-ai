@@ -26,12 +26,12 @@ if "scheduler_started" not in st.session_state:
 upload_page = st.Page("pages/upload.py", title="Upload Video")
 video_list_page = st.Page("pages/video_list.py",
                           title="Video List", default=True)
-show_video = st.Page("pages/show_video.py")
+view_video = st.Page("pages/view_video.py")
 
 
 # Navigation configuration and app entry point
 pg = st.navigation(
-    [upload_page, video_list_page, show_video], position="top", expanded=True
+    [upload_page, video_list_page, view_video], position="top", expanded=True
 )
 st.title("Video Analyzer")
 

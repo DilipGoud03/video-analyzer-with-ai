@@ -21,7 +21,7 @@ st.header("Upload Video")
 # Section: Initialize Session State
 # ---------------------------------
 # Ensures session variables are initialized properly to store video data and summaries.
-st.session_state["show_video"] = None
+st.session_state["view_video"] = None
 st.session_state["summary"] = None
 st.session_state["qa_listing"] = []
 

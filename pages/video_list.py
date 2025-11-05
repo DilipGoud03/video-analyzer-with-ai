@@ -21,7 +21,7 @@ st.header("Videos")
 # Section: Initialize Session State
 # ---------------------------------
 # Ensures the session state variables are ready to store video data and summaries.
-st.session_state["show_video"] = None
+st.session_state["view_video"] = None
 st.session_state["summary"] = None
 st.session_state["qa_listing"] = []
 
@@ -91,10 +91,10 @@ if len(results) > 0:
 
                 # Button to open and view selected video
                 with col2:
-                    if st.button("Show Video", key=f"show_video_{video_file['id']}"):
-                        st.session_state["show_video"] = video_path
-                        st.session_state["show_video_name"] = video_file['video_name']
+                    if st.button("View", key=f"view_video_{video_file['id']}"):
+                        st.session_state["view_video"] = video_path
+                        st.session_state["video_name"] = video_file['video_name']
                         st.session_state["duration"] = duration
-                        st.switch_page("pages/show_video.py")
+                        st.switch_page("pages/view_video.py")
     else:
         st.warning("Video directory not found.")

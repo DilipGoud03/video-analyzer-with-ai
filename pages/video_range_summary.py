@@ -13,11 +13,6 @@ utility_service = UtilityService()
 # Load temporary directory configuration
 TEMP_DIR = config("TEMP_DIR")
 
-# Section: Page Header
-# --------------------
-# Displays the header for video range summarization.
-st.header("Summarize Selected Range")
-
 # Initialize temporary video path in session state
 st.session_state["temp_video_path"] = None
 
