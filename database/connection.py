@@ -38,10 +38,3 @@ class Connection:
             except mysql.connector.Error as e:
                 raise ConnectionError(f"MySQL Connection Failed: {e}")
         return self.__connection
-
-    # Function: close_db
-    # ------------------
-    # Safely closes the database connection if it is currently active.
-    def close_db(self):
-        if self.__connection and self.__connection.is_connected():
-            self.__connection.close()
