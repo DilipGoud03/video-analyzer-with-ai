@@ -21,7 +21,6 @@ class VectorStoreService:
     #   and sets up the embedding and LLM instances via LLMService.
     # ------------------------------------------------------------
     def __init__(self):
-        os.makedirs(str(config("VECTOR_DB_DIR")), exist_ok=True)
         self.__embedding = LLMService().get_embedding_model()
         self.__llm = LLMService().get_chat_model()
 
@@ -39,7 +38,7 @@ class VectorStoreService:
         return Chroma(
             collection_name="video_summaries",
             embedding_function=self.__embedding,
-            persist_directory=str(config("VECTOR_DB_DIR")),
+            persist_directory="./database/vector_db/chroma_db",
         )
 
     # ------------------------------------------------------------
@@ -51,7 +50,7 @@ class VectorStoreService:
         vector_store = self.vector_db()
         # Delete all documents for a specific video
         try:
-            vector_store.delete(where={"video_name": file_name})
+            vector_store.delete(where={"source": file_name})
         except Exception as e:
             print(f"No documents found or error deleting: {e}")
             # Continue without error

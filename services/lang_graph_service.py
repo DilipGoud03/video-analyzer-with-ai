@@ -14,6 +14,7 @@ from langchain.chains.retrieval import create_retrieval_chain
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from services.vector_store_service import VectorStoreService
 from services.llm_service import LLMService
+from uuid import uuid4
 
 # ------------------------------------------------------------
 # Global Initializations
@@ -119,27 +120,26 @@ def store_summary_in_db(state: MainState):
     if state.get("is_new_video") and state["is_new_video"] is True:
         try:
             text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=500,
+                chunk_size=200,
                 chunk_overlap=50,
                 length_function=len,  # Measure by characters
-                # Try paragraph, line, word, character
                 separators=["\n\n", "\n", " ", ""]
             )
             # Create chunks with metadata
             chunks = text_splitter.split_text(state["summary"])
-            
-            docs = [
-                Document(
-                    page_content=chunk,
-                    metadata={
-                        "video_name": state["video_name"],
-                        "path": state.get("video_path", ""),
-                    }
-                )
-                for chunk in chunks
-            ]
-            
-            vector_db.add_documents(docs)
+            documents = []
+            if chunks and len(chunks) > 0:
+                for chunk in chunks:
+                    documents.append(
+                        Document(
+                            page_content=chunk,
+                            metadata={"source": state["video_name"]}
+                        )
+                    )
+            if len(documents) > 0:
+                uuids = [str(uuid4()) for _ in range(len(documents))]
+                vector_db.add_documents(documents=documents, ids=uuids)
+            return {}
         except Exception as e:
             print(f"Error saving summary: {e}")
     return {}
@@ -153,6 +153,7 @@ def store_summary_in_db(state: MainState):
 #   questions based on the video content.
 # ------------------------------------------------------------
 def ask_question(state: MainState):
+    vector_service.get_documents()
     question = state.get("question")
     video_name = state.get("video_name")
 
@@ -160,11 +161,12 @@ def ask_question(state: MainState):
         return {"answer": "No question provided."}
 
     vector_db = vector_service.vector_db()
-    filter_query = {"video_name": video_name}
+    filter_query = {"source": video_name}
     retriever = vector_db.as_retriever(search_kwargs={'filter': filter_query})
 
     rag_prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are an intelligent AI assistant. Use the following context to answer the question: {context}"),
+        ("system",
+         "You are an intelligent AI assistant. Use the following context to answer the question: {context}"),
         ("human", "{input}")
     ])
 

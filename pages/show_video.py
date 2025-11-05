@@ -1,6 +1,7 @@
 import streamlit as st
 from services.utility_service import UtilityService
 from pages import video_range_summary
+import html
 
 # Initialize UtilityService instance for handling summaries and Q&A
 utility_service = UtilityService()
@@ -103,20 +104,17 @@ if st.session_state.get("show_video"):
     if st.session_state["qa_listing"]:
         with st.container(height=300):
             for qa in st.session_state["qa_listing"]:
-                col1, col2 = st.columns([1, 2])
-                with col1:
-                    st.write(f"{qa['question']}")
-                with col2:
-                    st.write("")
+                with st.chat_message("human"):
+                    st.write(qa['question'])
+                
+                with st.chat_message("ai"):
                     st.write(qa["answer"])
-                st.divider()
 
     # Text Input: User Question Field
-    st.text_input(
-        "Type your question here:",
-        placeholder="e.g., What is the main topic discussed in the video?",
+    st.chat_input(
+        placeholder="e.g. What is the main topic discussed in the video?",
         key="question_input",
-        on_change=handle_question_submit,
+        on_submit=handle_question_submit,
     )
 
 # Section: Empty State Warning
