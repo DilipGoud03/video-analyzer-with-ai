@@ -39,18 +39,6 @@ class VideoTableService:
         return False
 
     # ------------------------------------------------------------
-    # Method: delete_video
-    # Description:
-    #   Deletes a video record from the 'videos' table based on ID.
-    #   - Returns True when deletion is successful.
-    # ------------------------------------------------------------
-    def delete_video(self, video_id: int) -> bool:
-        query = "DELETE FROM `videos` WHERE `id` = %s"
-        with self.__db.cursor() as cursor:
-            cursor.execute(query, (video_id,))
-        return True
-
-    # ------------------------------------------------------------
     # Method: get_video_by_name
     # Description:
     #   Fetches a single video record using its name.
@@ -77,7 +65,6 @@ class VideoTableService:
         try:
             query = "SELECT * FROM `videos`"
             values = []
-            conditions = []
 
             if filter:
                 query += " WHERE (`id` LIKE %s OR `video_name` LIKE %s OR `language` LIKE %s)"
@@ -90,39 +77,3 @@ class VideoTableService:
 
         except mysql.connector.Error as e:
             raise ProcessLookupError(f"MySQL Query Failed: {e}")
-
-    # ------------------------------------------------------------
-    # Method: update_video
-    # Description:
-    #   Updates details for an existing video record.
-    #   - Dynamically builds the UPDATE query based on non-empty fields.
-    #   - Supports updating video type, language, and suitability.
-    #   - Returns True on successful update.
-    # ------------------------------------------------------------
-    def update_video(
-        self,
-        video_id: int,
-        video_type: int,
-        video_category: str,
-        language: str,
-        suitability: str
-    ) -> bool:
-
-        query = "UPDATE `videos` SET "
-        values = []
-        updates = []
-
-        if video_type is not None:
-            updates.append("`video_type` = %s")
-            values.append(video_type)
-
-        if language:
-            updates.append("`language` = %s")
-            values.append(language)
-        
-        query += ", ".join(updates) + " WHERE `id` = %s"
-        values.append(video_id)
-
-        with self.__db.cursor() as cursor:
-            cursor.execute(query, tuple(values))
-        return True
