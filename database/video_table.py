@@ -8,7 +8,7 @@ import mysql.connector
 #   Handles all CRUD operations for the 'videos' table.
 #   Features include:
 #     - Insert, update, delete, and fetch video records
-#     - Filter and list videos by name, category, or language
+#     - Filter and list videos by name, or language
 #     - Safe MySQL query execution with error handling
 # ------------------------------------------------------------
 class VideoTableService:
@@ -71,10 +71,9 @@ class VideoTableService:
     # Description:
     #   Retrieves a list of videos with optional filtering.
     #   - Supports keyword search (ID, name, language)
-    #   - Supports category filtering (e.g., 'All', 'Music', 'Education')
     #   - Returns a list of dictionaries containing video details.
     # ------------------------------------------------------------
-    def video_list(self, filter: str = "", category: str = ""):
+    def video_list(self, filter: str = ""):
         try:
             query = "SELECT * FROM `videos`"
             values = []
@@ -84,14 +83,6 @@ class VideoTableService:
                 query += " WHERE (`id` LIKE %s OR `video_name` LIKE %s OR `language` LIKE %s)"
                 search = f"%{filter}%"
                 values.extend([search, search, search])
-
-            if category and category.lower() != "all":
-                if filter:
-                    query += " AND "
-                else:
-                    query += " WHERE "
-                query += "`category` = %s"
-                values.append(category)
 
             with self.__db.cursor(dictionary=True) as cursor:
                 cursor.execute(query, tuple(values))
@@ -105,7 +96,7 @@ class VideoTableService:
     # Description:
     #   Updates details for an existing video record.
     #   - Dynamically builds the UPDATE query based on non-empty fields.
-    #   - Supports updating video type, category, language, and suitability.
+    #   - Supports updating video type, language, and suitability.
     #   - Returns True on successful update.
     # ------------------------------------------------------------
     def update_video(
@@ -124,12 +115,11 @@ class VideoTableService:
         if video_type is not None:
             updates.append("`video_type` = %s")
             values.append(video_type)
-        if video_category:
-            updates.append("`video_category` = %s")
-            values.append(video_category)
+
         if language:
             updates.append("`language` = %s")
             values.append(language)
+        
         if suitability:
             updates.append("`suitability` = %s")
             values.append(suitability)

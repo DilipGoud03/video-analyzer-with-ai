@@ -1,7 +1,6 @@
 .env
 video-analyzer-venv
-org_videos/*
-temp_videos/*
+videos/*
 /__pycache__
 */__pycache__
 database/vector_db/*

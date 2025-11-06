@@ -33,26 +33,16 @@ st.session_state["qa_listing"] = []
 # - Returns a list of filtered video records.
 def filter_videos() -> list:
     search_val = st.session_state.get("search", "")
-    category_val = st.session_state.get("category", "")
-    return video_table.video_list(search_val, category_val)
+    return video_table.video_list(search_val)
 
 
 # Section: Filter Controls
 # ------------------------
 # Provides user input fields for searching and filtering videos by category.
-col3, col4 = st.columns([1, 1])
-with col3:
-    search = st.text_input(
-        "Search",
-        key="search",
-    )
-
-with col4:
-    category = st.selectbox(
-        "Category",
-        ["All", "Education", "Entertainment"],
-        key="category",
-    )
+search = st.text_input(
+    "Search",
+    key="search",
+)
 
 
 # Section: Video Listing
@@ -62,39 +52,41 @@ with col4:
 # - Provides a button to open and view the video in detail.
 video_files = [f for f in os.listdir(ORG_DIR) if f.endswith('.mp4')]
 results = filter_videos()
+with st.container(height=600):
+    if len(results) > 0:
+        if os.path.exists(ORG_DIR):
+            for video_file in results:
+                if video_file and video_file["video_name"] in video_files:
+                    video_path = os.path.join(ORG_DIR, video_file["video_name"])
 
-if len(results) > 0:
-    if os.path.exists(ORG_DIR):
-        for video_file in results:
-            if video_file and video_file["video_name"] in video_files:
-                video_path = os.path.join(ORG_DIR, video_file["video_name"])
+                    col1, col2 = st.columns([1, 3])
+                    # Display video
+                    with col1:
+                        with st.container(width=100):
+                            st.video(video_path)
 
-                st.divider()
-                col0, col1, col2 = st.columns([1, 2, 1])
+                    # Display video name and duration
+                    with col2:
+                        
+                        st.write(f"**Name:** {video_file['video_name']}")
+                        try:
+                            clip = VideoFileClip(video_path)
+                            duration = int(clip.duration)
+                            clip.close()
+                            st.write(f"**Duration:** {utility_service.format_time(duration)}")
+                        except:
+                            st.write("**Duration:** N/A")
+                            duration = 0
 
-                # Display video ID
-                with col0:
-                    st.write(f"**{video_file['id']}**")
-
-                # Display video name and duration
-                with col1:
+                    # Button to open and view selected video
+                        if st.button("View", key=f"view_video_{video_file['id']}"):
+                            st.session_state["view_video"] = video_path
+                            st.session_state["video_name"] = video_file['video_name']
+                            st.session_state["duration"] = duration
+                            st.switch_page("pages/view_video.py")
+                    st.divider()
                     
-                    st.write(f"**Name:** {video_file['video_name']}")
-                    try:
-                        clip = VideoFileClip(video_path)
-                        duration = int(clip.duration)
-                        clip.close()
-                        st.write(f"**Duration:** {utility_service.format_time(duration)}")
-                    except:
-                        st.write("**Duration:** N/A")
-                        duration = 0
-
-                # Button to open and view selected video
-                with col2:
-                    if st.button("View", key=f"view_video_{video_file['id']}"):
-                        st.session_state["view_video"] = video_path
-                        st.session_state["video_name"] = video_file['video_name']
-                        st.session_state["duration"] = duration
-                        st.switch_page("pages/view_video.py")
+        else:
+            st.warning("Video directory not found.")
     else:
-        st.warning("Video directory not found.")
+        st.warning("Videos not available!")

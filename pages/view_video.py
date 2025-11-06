@@ -102,7 +102,7 @@ if st.session_state.get("view_video"):
 
     # Display existing question-answer pairs
     if st.session_state["qa_listing"]:
-        with st.container(height=300):
+        with st.container(height=400):
             for qa in st.session_state["qa_listing"]:
                 with st.chat_message("user"):
                     st.write(qa['question'])
