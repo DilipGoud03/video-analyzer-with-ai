@@ -5,7 +5,7 @@ import logging
 import sys
 from database.video_table import VideoTableService
 from decouple import config
-from services.vector_store_service import VectorStoreService
+from services.vector_store import VectorStoreService
 
 # ------------------------------------------------------------
 # Module: Video Cleanup Scheduler

@@ -3,7 +3,7 @@ import os
 import uuid
 import time
 from moviepy.video.io.VideoFileClip import VideoFileClip
-from services.utility_service import UtilityService
+from services.utility import UtilityService
 from decouple import config
 
 

@@ -1,5 +1,5 @@
 import streamlit as st
-from services.utility_service import UtilityService
+from services.utility import UtilityService
 from pages import video_range_summary
 import html
 

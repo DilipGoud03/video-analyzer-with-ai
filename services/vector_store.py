@@ -1,7 +1,7 @@
 from decouple import config
 import os
 from langchain_chroma import Chroma
-from services.llm_service import LLMService
+from services.llm import LLMService
 
 # ------------------------------------------------------------
 # Class: VectorStoreService
