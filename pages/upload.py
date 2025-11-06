@@ -31,7 +31,7 @@ st.session_state["qa_listing"] = []
 # Allows users to upload video files in MP4 format.
 # Displays a help tooltip explaining the upload purpose.
 uploaded_file = st.file_uploader(
-    "Choose a video file",
+    "**Choose a video file**",
     type=["mp4"],
     help="Upload your video file here"
 )
@@ -44,7 +44,7 @@ uploaded_file = st.file_uploader(
 # - Adds video metadata to the database if it's a new upload.
 # - Displays the uploaded video and its duration.
 # - Automatically generates and displays an AI-based summary.
-if uploaded_file and st.button("Process Video"):
+if uploaded_file and st.button("**Process Video**"):
     is_new_video = False
 
     # Add video entry to the database if not already existing

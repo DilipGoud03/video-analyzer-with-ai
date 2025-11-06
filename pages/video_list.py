@@ -26,7 +26,7 @@ st.session_state["summary"] = None
 st.session_state["qa_listing"] = []
 
 
-# Function: filter_videos
+# Method: filter_videos
 # -----------------------
 # Retrieves the list of videos from the database.
 # - Uses search and category filters from session state.
@@ -40,7 +40,7 @@ def filter_videos() -> list:
 # ------------------------
 # Provides user input fields for searching and filtering videos by category.
 search = st.text_input(
-    "Search",
+    "**Search**",
     key="search",
 )
 
@@ -79,7 +79,7 @@ with st.container(height=600):
                             duration = 0
 
                     # Button to open and view selected video
-                        if st.button("View", key=f"view_video_{video_file['id']}"):
+                        if st.button("**View**", key=f"view_video_{video_file['id']}"):
                             st.session_state["view_video"] = video_path
                             st.session_state["video_name"] = video_file['video_name']
                             st.session_state["duration"] = duration

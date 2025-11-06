@@ -46,7 +46,7 @@ scheduler = BackgroundScheduler()
 
 
 # ------------------------------------------------------------
-# Function: remove_temp_videos
+# Method: remove_temp_videos
 # Description:
 #   Iterates through the TEMP_DIR and removes any temporary
 #   video files older than 180 seconds (3 minutes). Each file
@@ -86,7 +86,7 @@ def remove_temp_videos():
 
 
 # ------------------------------------------------------------
-# Function: remove_unwanted_videos
+# Method: remove_unwanted_videos
 # Description:
 #   Scans the ORG_DIR for video files and deletes any file that
 #   does not exist in the database. This ensures only valid,

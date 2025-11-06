@@ -17,7 +17,7 @@ class Connection:
         # Initialize a private connection attribute (starts as None)
         self.__connection = None
 
-    # Function: connect_db
+    # Method: connect_db
     # --------------------
     # Establishes a connection to the MySQL database.
     # - Uses credentials (host, user, password, etc.) from environment variables.

@@ -92,27 +92,27 @@ class UtilityService:
 
         # --- Left Column: Type & Duration ---
         with col0:
-            summary_type = st.radio("Summary Type:", ["Short summary", "Full explanation"])
+            summary_type = st.radio("**Summary Type:**", ["Short summary", "Full explanation"])
             summary_duration = st.number_input(
-                "Select Duration (in minutes):",
+                "**Select Duration (in minutes):**",
                 min_value=0,
                 value=1
             )
 
         # --- Middle Column: Format & Detection ---
         with col1:
-            summary_bullet = st.checkbox("Show summary as bullet points")
-            detect_harmful_words = st.checkbox("Detect harmful words")
-            detect_harmful_pictures = st.checkbox("Detect harmful visuals")
+            summary_bullet = st.checkbox("**Show summary as bullet points**")
+            detect_harmful_words = st.checkbox("**Detect harmful words**")
+            detect_harmful_pictures = st.checkbox("**Detect harmful visuals**")
 
         # --- Right Column: Age & Language ---
         with col2:
             age = st.selectbox(
-                "Select Age Group:",
+                "**Select Age Group:**",
                 [0, 5, 10, 15, 18, 19]
             )
             summary_language = st.selectbox(
-                "Summary Language:",
+                "**Summary Language:**",
                 ["Hindi", "English", "Hinglish", "Video Language"]
             )
 
