@@ -120,10 +120,6 @@ class VideoTableService:
             updates.append("`language` = %s")
             values.append(language)
         
-        if suitability:
-            updates.append("`suitability` = %s")
-            values.append(suitability)
-
         query += ", ".join(updates) + " WHERE `id` = %s"
         values.append(video_id)
 
