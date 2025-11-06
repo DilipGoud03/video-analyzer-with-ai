@@ -176,7 +176,7 @@ class LanggraphService:
             ("human", "{input}")
         ])
 
-        combine_docs_chain = create_stuff_documents_chain(llm, rag_prompt)
+        combine_docs_chain = create_stuff_documents_chain(self.__llm, rag_prompt)
         retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
 
         result = retrieval_chain.invoke({"input": question})
