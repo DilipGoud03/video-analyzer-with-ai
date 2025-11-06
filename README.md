@@ -85,7 +85,7 @@ Result → Display on Streamlit
 
 4. **Start the server**
    ```bash
-   streamlit run streamlit_app.py
+   streamlit run app.py
 
    ```
 
