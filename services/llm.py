@@ -20,7 +20,7 @@ class LLMService:
     # ------------------------------------------------------------
     def __init__(self):
         self.__provider = str(config("PROVIDER"))
-        self.__chat_model = str(config("MODEL_NAME"))
+        self.__chat_model = str(config("CHAT_MODEL"))
         self.__embedding_model = str(config("EMBEDDING_MODEL"))
 
     # ------------------------------------------------------------
