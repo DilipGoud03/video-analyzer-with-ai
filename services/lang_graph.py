@@ -172,22 +172,30 @@ class LanggraphService:
         response = self.__llm.invoke([message])
         return {"summary": response.content}
     
-    async def validate_and_update_video(self, state: MainState):
-        # if state.get("is_new_video") and state["is_new_video"] is True:
-        summary = state.get("summary", "No summary available")
-        prompt = f"""
-            Analyze the video summary: '{summary}'.
-            Determine category (Like in Film & Animation, Autos & Vehicles, Pets & Animals, Travel & Events, People & Blogs, News & Politics, Science & Technology, Howto & Style, Nonprofits & Activism, Music, Sports, Short, Movies Education, Gaming, Videoblogging, Comedy, Entertainment, Movies, Anime/Animation, Action/Adventure, Sci-Fi/Fantasy, Classics, Comedy, Documentary, Drama, Family, Foreign, Horror, Thriller, Shorts, Shows, Trailers) 
-            and suitability (use ONLY: 'under_5, 'under_10','under_13','under_16','under_18','adult').
-            Call update_video_metadata with video_name='{state['video_name']}', category, suitability.
-        """
+    # ------------------------------------------------------------
+    # async Node: validate_and_update_video
+    # Description:
+    #   Sends the summary of provided video to MCP Tool
+    #   MCP tool analyze the summary and retrive the category and suitaibilty based on summary content
+    #   and update this details by using mcp server in database.
+    # ------------------------------------------------------------
 
-        response = await self.__llm_with_tools.ainvoke([HumanMessage(content=prompt)])
-        if hasattr(response, "tool_calls") and response.tool_calls:
-            for call in response.tool_calls:
-                async with self.__mcp_client.session("VideoDatabase") as session:
-                    data = await session.call_tool(call["name"], arguments=call["args"]["kwargs"])
-                    print("data", data)
+    async def validate_and_update_video(self, state: MainState):
+        if state.get("is_new_video") and state["is_new_video"] is True:
+            summary = state.get("summary", "No summary available")
+            prompt = f"""
+                Analyze the video summary: '{summary}'.
+                Determine category (Like in Film & Animation, Autos & Vehicles, Pets & Animals, Travel & Events, People & Blogs, News & Politics, Science & Technology, Howto & Style, Nonprofits & Activism, Music, Sports, Short, Movies Education, Gaming, Videoblogging, Comedy, Entertainment, Movies, Anime/Animation, Action/Adventure, Sci-Fi/Fantasy, Classics, Comedy, Documentary, Drama, Family, Foreign, Horror, Thriller, Shorts, Shows, Trailers) 
+                and suitability (use ONLY: 'under_5, 'under_10','under_13','under_16','under_18','adult').
+                Call update_video_metadata with video_name='{state['video_name']}', category, suitability.
+            """
+
+            response = await self.__llm_with_tools.ainvoke([HumanMessage(content=prompt)])
+            if hasattr(response, "tool_calls") and response.tool_calls:
+                for call in response.tool_calls:
+                    async with self.__mcp_client.session("VideoDatabase") as session:
+                        data = await session.call_tool(call["name"], arguments=call["args"]["kwargs"])
+                        print("data", data)
         return {}
 
     # ------------------------------------------------------------
