@@ -1,14 +1,15 @@
 from langgraph.checkpoint.memory import MemorySaver
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, Annotated
 from langgraph.graph import StateGraph, START, END
 from decouple import config
 import os
 import mimetypes
 import base64
 import sys
+from langgraph.graph.message import add_messages
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage, AnyMessage
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains.retrieval import create_retrieval_chain
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -19,6 +20,20 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 import traceback
 import asyncio
 from langchain_core.tools import StructuredTool
+import os
+import mimetypes
+import base64
+
+
+# ------------------------------------------------------------
+# Global: _GLOBAL_MEMORY_SAVER
+# Description:
+#   Creates a single persistent in-memory checkpoint to store
+#   all conversation threads. Prevents resetting memory between
+#   multiple .invoke() calls during a Streamlit session.
+# ------------------------------------------------------------
+_GLOBAL_MEMORY_SAVER = MemorySaver()
+
 
 # ------------------------------------------------------------
 # TypedDict: UploadedFile
@@ -49,6 +64,7 @@ class MainState(TypedDict):
     prompt: Optional[str]
     question: Optional[str]
     answer: Optional[str]
+    messages: Annotated[list[AnyMessage], add_messages]
 
 
 # ------------------------------------------------------------
@@ -71,6 +87,8 @@ class LanggraphService:
         self.__llm = LLMService().get_chat_model()
         self.__llm_with_tools = None
         self.__mcp_client = None
+        self.__graph = None
+
 
     # ------------------------------------------------------------
     # Async: initialize_mcp
@@ -124,7 +142,8 @@ class LanggraphService:
     # ------------------------------------------------------------
     # Node: upload_video
     # Description:
-    #   Loads and processes the uploaded video file into memory for downstream nodes.
+    #   Loads and processes the uploaded video file into memory
+    #   for downstream nodes.
     # ------------------------------------------------------------
 
     def upload_video(self, state: MainState):
@@ -212,7 +231,7 @@ class LanggraphService:
                 text_splitter = RecursiveCharacterTextSplitter(
                     chunk_size=200,
                     chunk_overlap=50,
-                    length_function=len,  # Measure by characters
+                    length_function=len,
                     separators=["\n\n", "\n", " ", ""]
                 )
                 # Create chunks with metadata
@@ -239,24 +258,25 @@ class LanggraphService:
     # Description:
     #   Retrieves stored summaries from the vector DB and uses a
     #   retrieval-augmented generation (RAG) chain to answer user
-    #   questions based on the video content.
+    #   questions based on the video content. Includes persistent
+    #   conversation memory between multiple .invoke() calls.
     # ------------------------------------------------------------
 
     def ask_question(self, state: MainState):
         question = state.get("question")
         video_name = state.get("video_name")
+        messages = state.get("messages", [])
 
         vector_db = self.__vector_service.vector_db()
-
-        filter_query = {"source": video_name}
-        retriever = vector_db.as_retriever(
-            search_kwargs={'filter': filter_query})
+        retriever = vector_db.as_retriever(search_kwargs={'filter': {"source": video_name}})
 
         rag_prompt = ChatPromptTemplate.from_messages([
-            ("system",
-             "You are an intelligent AI assistant. Use the following video context to answer the question directly and clearly. "
-             "Do not say things like 'Based on the provided video text' or 'According to the context' also always use video instead of context and text.\n\n"
-             "Context:\n{context}"),
+            ("system", 
+            "You are a helpful assistant. Answer using conversation history first. "
+            "If the question is about previous conversation, use the chat history. "
+            "If the question is about the video, use the context below.\n\n"
+            "Video Context:\n{context}"),
+            *messages,
             ("human", "{input}")
         ])
 
@@ -265,7 +285,11 @@ class LanggraphService:
         retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
 
         result = retrieval_chain.invoke({"input": question})
-        return {"answer": result["answer"]}
+        
+        return {
+            "answer": result["answer"],
+            "messages": [HumanMessage(content=question), AIMessage(content=result["answer"])]
+        }
 
     # ------------------------------------------------------------
     # Node: conditional_node
@@ -273,15 +297,24 @@ class LanggraphService:
     #   Determines which node in the workflow to start from based
     #   on the user's input type — a question or a new video upload.
     # ------------------------------------------------------------
-
     def conditional_node(self, state: MainState) -> str:
         if state.get("question") and state['question'] != '':
             return "ask_question"
         return "upload_video"
 
-    def build_pipeline(self, is_questioning: bool = False):
+    # ------------------------------------------------------------
+    # Method: build_pipeline
+    # Description:
+    #   Builds and compiles the LangGraph pipeline with a single
+    #   persistent memory checkpoint to preserve chat context.
+    # ------------------------------------------------------------
+    def build_pipeline(self):
+        if self.__graph is not None:
+            return self.__graph
+            
         pipeline = StateGraph(MainState)
-
+        checkpointer = _GLOBAL_MEMORY_SAVER
+        
         # Add nodes
         pipeline.add_node("upload_video", self.upload_video)
         pipeline.add_node("validate_and_update_video", lambda state: asyncio.run(
@@ -307,8 +340,5 @@ class LanggraphService:
         pipeline.add_edge("store_summary_in_db", END)
         pipeline.add_edge("ask_question", END)
 
-        # Compile with or without memory saver
-        if is_questioning:
-            checkpointer = MemorySaver()
-            return pipeline.compile(checkpointer=checkpointer)
-        return pipeline.compile()
+        self.__graph = pipeline.compile(checkpointer=checkpointer)
+        return self.__graph
