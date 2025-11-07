@@ -1,16 +1,17 @@
 from database.connection import Connection
 import mysql.connector
 
-
 # ------------------------------------------------------------
 # Class: VideoTableService
 # Description:
 #   Handles all CRUD operations for the 'videos' table.
 #   Features include:
 #     - Insert, update, delete, and fetch video records
-#     - Filter and list videos by name, or language
+#     - Filter and list videos by name, or category
 #     - Safe MySQL query execution with error handling
 # ------------------------------------------------------------
+
+
 class VideoTableService:
     # ------------------------------------------------------------
     # Method: __init__
@@ -58,7 +59,7 @@ class VideoTableService:
     # Method: video_list
     # Description:
     #   Retrieves a list of videos with optional filtering.
-    #   - Supports keyword search (ID, name, language)
+    #   - Supports keyword search (ID, name, category)
     #   - Returns a list of dictionaries containing video details.
     # ------------------------------------------------------------
     def video_list(self, filter: str = ""):
@@ -67,7 +68,7 @@ class VideoTableService:
             values = []
 
             if filter:
-                query += " WHERE (`id` LIKE %s OR `video_name` LIKE %s OR `language` LIKE %s)"
+                query += " WHERE (`id` LIKE %s OR `video_name` LIKE %s OR `category` LIKE %s)"
                 search = f"%{filter}%"
                 values.extend([search, search, search])
 
@@ -77,3 +78,34 @@ class VideoTableService:
 
         except mysql.connector.Error as e:
             raise ProcessLookupError(f"MySQL Query Failed: {e}")
+
+    # ------------------------------------------------------------
+    # Method: update_video
+    # Description:
+    #   Updates details for an existing video record.
+    #   - Dynamically builds the UPDATE query based on non-empty fields.
+    #   - Supports updating video type, category, and suitability.
+    #   - Returns True on successful update.
+    # ------------------------------------------------------------
+    def update_video(self, video_name: int, category: str, suitability: str) -> bool:
+        query = "UPDATE `videos` SET "
+        values = []
+        updates = []
+
+        if video_name is not None:
+            updates.append("`video_name` = %s")
+            values.append(video_name)
+
+        if category:
+            updates.append("`category` = %s")
+            values.append(category)
+
+        if suitability:
+            updates.append("`suitability` = %s")
+            values.append(suitability)
+
+        query += ", ".join(updates) + " WHERE `video_name` = %s"
+        values.append(video_name)
+        with self.__db.cursor() as cursor:
+            cursor.execute(query, tuple(values))
+        return True

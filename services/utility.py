@@ -1,5 +1,6 @@
 import streamlit as st
 from services.lang_graph import LanggraphService
+import asyncio
 
 # ------------------------------------------------------------
 # Class: UtilityService
@@ -23,6 +24,7 @@ class UtilityService:
     # ------------------------------------------------------------
     def __init__(self) -> None:
         self.__langgrapgh_service = LanggraphService()
+        asyncio.run(self.__langgrapgh_service.initialize_mcp())
         self.__config = {
             "configurable": {
                 "thread_id": st.session_state.get("user_name", "12312")

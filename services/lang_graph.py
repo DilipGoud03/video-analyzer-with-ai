@@ -5,7 +5,7 @@ from decouple import config
 import os
 import mimetypes
 import base64
-
+import sys
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage
@@ -15,7 +15,10 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from services.vector_store import VectorStoreService
 from services.llm import LLMService
 from uuid import uuid4
-
+from langchain_mcp_adapters.client import MultiServerMCPClient
+import traceback
+import asyncio
+from langchain_core.tools import StructuredTool
 
 # ------------------------------------------------------------
 # TypedDict: UploadedFile
@@ -23,6 +26,8 @@ from uuid import uuid4
 #   Represents an uploaded video file, including its MIME type
 #   and raw binary data for model input.
 # ------------------------------------------------------------
+
+
 class UploadedFile(TypedDict):
     mime_type: str
     data: bytes
@@ -64,12 +69,64 @@ class LanggraphService:
         # ------------------------------------------------------------
         self.__vector_service = VectorStoreService()
         self.__llm = LLMService().get_chat_model()
+        self.__llm_with_tools = None
+        self.__mcp_client = None
+
+    # ------------------------------------------------------------
+    # Async: initialize_mcp
+    # Description:
+    #   Starts the MCP stdio server (VideoDatabase) and loads
+    #   all available tools for the LLM to use.
+    # ------------------------------------------------------------
+    async def initialize_mcp(self):
+        print("Starting MCP initialization...")
+        try:
+            server_path = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "mcp/server.py")
+            )
+
+            self.__mcp_client = MultiServerMCPClient({
+                "VideoDatabase": {
+                    "transport": "stdio",
+                    "command": sys.executable,
+                    "args": [server_path],
+                }
+            })
+
+            # Fetch raw MCP tools
+            raw_tools = await self.__mcp_client.get_tools()
+
+            # Convert each MCP tool → LangChain StructuredTool
+            wrapped_tools = []
+            for tool in raw_tools:
+                async def _call_tool(**kwargs):
+                    return await self.__mcp_client.call_tool(tool.name, kwargs)
+
+                wrapped_tool = StructuredTool.from_function(
+                    func=_call_tool,
+                    name=tool.name,
+                    description=tool.description or "MCP tool",
+                )
+                wrapped_tools.append(wrapped_tool)
+
+            self.__llm_with_tools = self.__llm.bind_tools(wrapped_tools)
+
+            print("LLM successfully bound with MCP tools.")
+            return wrapped_tools
+
+        except Exception as e:
+            print(f"MCP initialization failed: {e}")
+            traceback.print_exc()
+            self.__mcp_tools = []
+            self.__llm_with_tools = self.__llm
+            return []
 
     # ------------------------------------------------------------
     # Node: upload_video
     # Description:
     #   Loads and processes the uploaded video file into memory for downstream nodes.
     # ------------------------------------------------------------
+
     def upload_video(self, state: MainState):
         path = state.get("video_path")
         if not path or not os.path.exists(path):
@@ -90,6 +147,7 @@ class LanggraphService:
     #   and generates a natural, human-readable summary describing
     #   scenes, actions, and emotions without introductory phrases.
     # ------------------------------------------------------------
+
     def summarize_video(self, state: MainState):
         uploaded_file = state["uploaded_file"]
         prompt = """
@@ -113,6 +171,24 @@ class LanggraphService:
 
         response = self.__llm.invoke([message])
         return {"summary": response.content}
+    
+    async def validate_and_update_video(self, state: MainState):
+        # if state.get("is_new_video") and state["is_new_video"] is True:
+        summary = state.get("summary", "No summary available")
+        prompt = f"""
+            Analyze the video summary: '{summary}'.
+            Determine category (Like in Film & Animation, Autos & Vehicles, Pets & Animals, Travel & Events, People & Blogs, News & Politics, Science & Technology, Howto & Style, Nonprofits & Activism, Music, Sports, Short, Movies Education, Gaming, Videoblogging, Comedy, Entertainment, Movies, Anime/Animation, Action/Adventure, Sci-Fi/Fantasy, Classics, Comedy, Documentary, Drama, Family, Foreign, Horror, Thriller, Shorts, Shows, Trailers) 
+            and suitability (use ONLY: 'under_5, 'under_10','under_13','under_16','under_18','adult').
+            Call update_video_metadata with video_name='{state['video_name']}', category, suitability.
+        """
+
+        response = await self.__llm_with_tools.ainvoke([HumanMessage(content=prompt)])
+        if hasattr(response, "tool_calls") and response.tool_calls:
+            for call in response.tool_calls:
+                async with self.__mcp_client.session("VideoDatabase") as session:
+                    data = await session.call_tool(call["name"], arguments=call["args"]["kwargs"])
+                    print("data", data)
+        return {}
 
     # ------------------------------------------------------------
     # Node: store_summary_in_db
@@ -121,7 +197,6 @@ class LanggraphService:
     #   database for future semantic retrieval and question-answering.
     #   Skips storage if not marked as a new video.
     # ------------------------------------------------------------
-
     def store_summary_in_db(self, state: MainState):
         vector_db = self.__vector_service.vector_db()
         if state.get("is_new_video") and state["is_new_video"] is True:
@@ -164,9 +239,10 @@ class LanggraphService:
         video_name = state.get("video_name")
 
         vector_db = self.__vector_service.vector_db()
-        
+
         filter_query = {"source": video_name}
-        retriever = vector_db.as_retriever(search_kwargs={'filter': filter_query})
+        retriever = vector_db.as_retriever(
+            search_kwargs={'filter': filter_query})
 
         rag_prompt = ChatPromptTemplate.from_messages([
             ("system",
@@ -176,7 +252,8 @@ class LanggraphService:
             ("human", "{input}")
         ])
 
-        combine_docs_chain = create_stuff_documents_chain(self.__llm, rag_prompt)
+        combine_docs_chain = create_stuff_documents_chain(
+            self.__llm, rag_prompt)
         retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
 
         result = retrieval_chain.invoke({"input": question})
@@ -199,6 +276,8 @@ class LanggraphService:
 
         # Add nodes
         pipeline.add_node("upload_video", self.upload_video)
+        pipeline.add_node("validate_and_update_video", lambda state: asyncio.run(
+            self.validate_and_update_video(state)))
         pipeline.add_node("summarize_video", self.summarize_video)
         pipeline.add_node("store_summary_in_db", self.store_summary_in_db)
         pipeline.add_node("ask_question", self.ask_question)
@@ -215,6 +294,7 @@ class LanggraphService:
 
         # Sequential edges
         pipeline.add_edge("upload_video", "summarize_video")
+        pipeline.add_edge("summarize_video", "validate_and_update_video")
         pipeline.add_edge("summarize_video", "store_summary_in_db")
         pipeline.add_edge("store_summary_in_db", END)
         pipeline.add_edge("ask_question", END)
