@@ -49,7 +49,7 @@ Result → Display on Streamlit
 | **AI / LLMs** | LangChain, LangGraph, OpenAI, Google Gemini |
 | **Vector Database** | ChromaDB |
 | **Embeddings** | GoogleGenerativeAIEmbeddings, OpenAIEmbeddings |
-| **Environment** | Python-dotenv, OS, Pandas |
+| **Environment** | Python-dotenv|
 
 ## Installation
 
