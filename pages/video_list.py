@@ -52,12 +52,13 @@ search = st.text_input(
 # - Provides a button to open and view the video in detail.
 video_files = [f for f in os.listdir(ORG_DIR) if f.endswith('.mp4')]
 results = filter_videos()
-with st.container(height=600):
-    if len(results) > 0:
+if len(results) > 0:
+    with st.container(height=600):
         if os.path.exists(ORG_DIR):
             for video_file in results:
                 if video_file and video_file["video_name"] in video_files:
-                    video_path = os.path.join(ORG_DIR, video_file["video_name"])
+                    video_path = os.path.join(
+                        ORG_DIR, video_file["video_name"])
 
                     col1, col2 = st.columns([1, 3])
                     # Display video
@@ -67,13 +68,14 @@ with st.container(height=600):
 
                     # Display video name and duration
                     with col2:
-                        
+
                         st.write(f"**Name:** {video_file['video_name']}")
                         try:
                             clip = VideoFileClip(video_path)
                             duration = int(clip.duration)
                             clip.close()
-                            st.write(f"**Duration:** {utility_service.format_time(duration)}")
+                            st.write(
+                                f"**Duration:** {utility_service.format_time(duration)}")
                         except:
                             st.write("**Duration:** N/A")
                             duration = 0
@@ -85,8 +87,8 @@ with st.container(height=600):
                             st.session_state["duration"] = duration
                             st.switch_page("pages/view_video.py")
                     st.divider()
-                    
+
         else:
             st.warning("Video directory not found.")
-    else:
-        st.warning("Videos not available!")
+else:
+    st.warning("Videos not available!")
