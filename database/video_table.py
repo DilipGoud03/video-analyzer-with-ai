@@ -1,5 +1,6 @@
 from database.connection import Connection
 import mysql.connector
+from enumeration.suitability import SuitabilityEnum
 
 # ------------------------------------------------------------
 # Class: VideoTableService
@@ -59,16 +60,19 @@ class VideoTableService:
     # Method: video_list
     # Description:
     #   Retrieves a list of videos with optional filtering.
-    #   - Supports keyword search (ID, name, category)
+    #   - Supports keyword search (ID, name, category) and suitability
     #   - Returns a list of dictionaries containing video details.
     # ------------------------------------------------------------
-    def video_list(self, filter: str = ""):
+    def video_list(self, suitability: SuitabilityEnum, filter: str = ""):
         try:
             query = "SELECT * FROM `videos`"
             values = []
+            if suitability:
+                query += " WHERE `suitability` = %s"
+                values.append(suitability)
 
             if filter:
-                query += " WHERE (`id` LIKE %s OR `video_name` LIKE %s OR `category` LIKE %s)"
+                query += " AND (`id` LIKE %s OR `video_name` LIKE %s OR `category` LIKE %s)"
                 search = f"%{filter}%"
                 values.extend([search, search, search])
 

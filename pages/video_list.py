@@ -4,7 +4,7 @@ from moviepy.video.io.VideoFileClip import VideoFileClip
 from services.utility import UtilityService
 from database.video_table import VideoTableService
 from decouple import config
-
+from enumeration.suitability import SuitabilityEnum
 
 # Initialize services and configuration
 video_table = VideoTableService()
@@ -33,17 +33,24 @@ st.session_state["qa_listing"] = []
 # - Returns a list of filtered video records.
 def filter_videos() -> list:
     search_val = st.session_state.get("search", "")
-    return video_table.video_list(search_val)
-
+    suitable_val = st.session_state.get("suitable", "")
+    return video_table.video_list(suitable_val, search_val)
 
 # Section: Filter Controls
 # ------------------------
 # Provides user input fields for searching and filtering videos by category.
-search = st.text_input(
-    "**Search**",
-    key="search",
-)
-
+col0, col1 = st.columns([1, 1])
+with col0:
+    search = st.text_input(
+        "**Search**",
+        key="search",
+    )
+with col1:
+    suitable = st.selectbox(
+        label="**suitable**",
+        key="suitable",
+        options=SuitabilityEnum
+    )
 
 # Section: Video Listing
 # ----------------------
@@ -57,18 +64,16 @@ if len(results) > 0:
         if os.path.exists(ORG_DIR):
             for video_file in results:
                 if video_file and video_file["video_name"] in video_files:
-                    video_path = os.path.join(
-                        ORG_DIR, video_file["video_name"])
+                    video_path = os.path.join(ORG_DIR, video_file["video_name"])
 
-                    col1, col2 = st.columns([1, 3])
+                    col2, col3 = st.columns([1, 3])
                     # Display video
-                    with col1:
+                    with col2:
                         with st.container(width=100):
                             st.video(video_path)
 
                     # Display video name and duration
-                    with col2:
-
+                    with col3:
                         st.write(f"**Name:** {video_file['video_name']}")
                         try:
                             clip = VideoFileClip(video_path)
