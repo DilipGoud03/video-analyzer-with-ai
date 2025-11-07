@@ -14,7 +14,7 @@ from services.lang_graph import LanggraphService
 # ------------------------------------------------------------
 
 
-class UtilityService:
+class UtilityService:   
     # ------------------------------------------------------------
     # Method: __init__
     # Description:
@@ -22,23 +22,30 @@ class UtilityService:
     #   a unique thread_id for each Streamlit session.
     # ------------------------------------------------------------
     def __init__(self) -> None:
-        self.__langgrapgh_service = LanggraphService()
+        self.__langgraph_service = LanggraphService()
+        self.__graph = self.__langgraph_service.build_pipeline()  # Compile once
+
         self.__config = {
             "configurable": {
-                "thread_id": st.session_state.get("user_name", "12312")
+                "thread_id": "12312"
             }
         }
 
     # ------------------------------------------------------------
-    # Method: format_time
+    # Method: generate_answer
     # Description:
-    #   Converts total seconds into a human-readable
-    #   "minutes:seconds" (mm:ss) format.
+    #   Answers user questions about the video content using
+    #   previously generated summaries stored in the vector DB.
+    #   The response is produced via the LangGraph workflow.
     # ------------------------------------------------------------
-    def format_time(self, seconds: int) -> str:
-        m = int(seconds) // 60
-        s = int(seconds) % 60
-        return f"{m}:{s:02d}"
+    def generate_answer(self, path, video_name, question):
+        print(f"DEBUG: Using thread_id: {self.__config['configurable']['thread_id']}")  # Debug
+        
+        input = {"video_path": path, "video_name": video_name, "question": question,"messages": []}
+        state = self.__graph.invoke(input, self.__config)
+        
+        print(f"DEBUG: Final state messages: {state.get('messages', [])}")  # Debug
+        return state.get('answer', '')
 
     # ------------------------------------------------------------
     # Method: generate_summary
@@ -55,25 +62,10 @@ class UtilityService:
             "is_new_video": is_new_video,
             "prompt": prompt
         }
-        state = self.__langgrapgh_service.build_pipeline(False).invoke(inputs)  # type:ignore
+        state = self.__graph.invoke(inputs, self.__config)  # type:ignore
         if 'summary' in state:
             summary = state['summary']
         return summary
-
-    # ------------------------------------------------------------
-    # Method: generate_answer
-    # Description:
-    #   Answers user questions about the video content using
-    #   previously generated summaries stored in the vector DB.
-    #   The response is produced via the LangGraph workflow.
-    # ------------------------------------------------------------
-    def generate_answer(self, path, video_name, question):
-        answer = ''
-        input = {"video_path": path, "video_name": video_name, "question": question}
-        state = self.__langgrapgh_service.build_pipeline(True).invoke(input, self.__config)
-        if 'answer' in state:
-            answer = state['answer']
-        return answer
 
     # ------------------------------------------------------------
     # Method: custom_prompt
@@ -159,3 +151,14 @@ class UtilityService:
             height=180,
             help="You can also create or edit a custom prompt here."
         )
+
+    # ------------------------------------------------------------
+    # Method: format_time
+    # Description:
+    #   Converts total seconds into a human-readable
+    #   "minutes:seconds" (mm:ss) format.
+    # ------------------------------------------------------------
+    def format_time(self, seconds: int) -> str:
+        m = int(seconds) // 60
+        s = int(seconds) % 60
+        return f"{m}:{s:02d}"
