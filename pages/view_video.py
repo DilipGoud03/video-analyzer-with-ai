@@ -102,23 +102,22 @@ if st.session_state.get("view_video"):
     # Allows users to ask questions about the video content.
     st.divider()
     st.write("**Ask Questions About the Video**")
-    with st.container(border=True, height=500, vertical_alignment='bottom'):
-        # Display existing question-answer pairs
-        if st.session_state["qa_listing"]:
-            with st.container(border=False, height=400):
-                for qa in st.session_state["qa_listing"]:
-                    with st.chat_message("user"):
-                        st.write(qa['question'])
-                    
-                    with st.chat_message("assistant"):
-                        st.write(qa["answer"])
+    # Display existing question-answer pairs
+    if st.session_state["qa_listing"]:
+        with st.container(border=False, height=400):
+            for qa in st.session_state["qa_listing"]:
+                with st.chat_message("user"):
+                    st.write(qa['question'])
+                
+                with st.chat_message("assistant"):
+                    st.write(qa["answer"])
 
-        # Text Input: User Question Field
-        st.chat_input(
-            placeholder="e.g. What is the main topic discussed in the video?",
-            key="question_input",
-            on_submit=handle_question_submit,
-        )
+    # Text Input: User Question Field
+    st.chat_input(
+        placeholder="e.g. What is the main topic discussed in the video?",
+        key="question_input",
+        on_submit=handle_question_submit,
+    )
 
 # Section: Empty State Warning
 # ----------------------------

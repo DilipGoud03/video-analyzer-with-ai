@@ -27,7 +27,7 @@ class UtilityService:
 
         self.__config = {
             "configurable": {
-                "thread_id": "12312"
+                "thread_id": st.session_state.get("video_name", "1234")
             }
         }
 
@@ -38,13 +38,9 @@ class UtilityService:
     #   previously generated summaries stored in the vector DB.
     #   The response is produced via the LangGraph workflow.
     # ------------------------------------------------------------
-    def generate_answer(self, path, video_name, question):
-        print(f"DEBUG: Using thread_id: {self.__config['configurable']['thread_id']}")  # Debug
-        
+    def generate_answer(self, path, video_name, question):        
         input = {"video_path": path, "video_name": video_name, "question": question,"messages": []}
         state = self.__graph.invoke(input, self.__config)
-        
-        print(f"DEBUG: Final state messages: {state.get('messages', [])}")  # Debug
         return state.get('answer', '')
 
     # ------------------------------------------------------------
@@ -55,17 +51,9 @@ class UtilityService:
     #   generated summary text from the state dictionary.
     # ------------------------------------------------------------
     def generate_summary(self, path, video_name: str, is_new_video: bool, prompt=''):
-        summary = 'summary not available'
-        inputs = {
-            "video_path": path,
-            "video_name": video_name,
-            "is_new_video": is_new_video,
-            "prompt": prompt
-        }
+        inputs = {"video_path": path, "video_name": video_name, "is_new_video": is_new_video, "prompt": prompt}
         state = self.__graph.invoke(inputs, self.__config)  # type:ignore
-        if 'summary' in state:
-            summary = state['summary']
-        return summary
+        return state.get('summary', '')
 
     # ------------------------------------------------------------
     # Method: custom_prompt

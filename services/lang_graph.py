@@ -17,13 +17,13 @@ import base64
 
 
 # ------------------------------------------------------------
-# Global: _GLOBAL_MEMORY_SAVER
+# Global: MEMORY_SAVER
 # Description:
 #   Creates a single persistent in-memory checkpoint to store
 #   all conversation threads. Prevents resetting memory between
 #   multiple .invoke() calls during a Streamlit session.
 # ------------------------------------------------------------
-_GLOBAL_MEMORY_SAVER = MemorySaver()
+MEMORY_SAVER = MemorySaver()
 
 
 # ------------------------------------------------------------
@@ -71,6 +71,7 @@ class LanggraphService:
         # Initializes the vector store service and chat model for use
         # throughout the LangGraph workflow. This allows persistence
         # of summaries and intelligent responses using embeddings.
+        # Also initial load the memoey saver
         # ------------------------------------------------------------
         self.__vector_service = VectorStoreService()
         self.__llm = LLMService().get_chat_model()
@@ -143,7 +144,7 @@ class LanggraphService:
                     length_function=len,
                     separators=["\n\n", "\n", " ", ""]
                 )
-                # Create chunks with metadata
+
                 chunks = text_splitter.split_text(state["summary"])
                 documents = []
                 if chunks and len(chunks) > 0:
@@ -177,23 +178,26 @@ class LanggraphService:
         messages = state.get("messages", [])
 
         vector_db = self.__vector_service.vector_db()
-        retriever = vector_db.as_retriever(search_kwargs={'filter': {"source": video_name}})
+        retriever = vector_db.as_retriever(
+            search_kwargs={'filter': {"source": video_name}}
+        )
 
         rag_prompt = ChatPromptTemplate.from_messages([
-            ("system", 
-            "You are a helpful assistant. Answer using conversation history first. "
-            "If the question is about previous conversation, use the chat history. "
-            "If the question is about the video, use the context below.\n\n"
-            "Video Context:\n{context}"),
+            ("system",
+             "You are a helpful assistant. Answer only using conversation history and provided video context. "
+             "If the question is about previous conversation, use the chat history. "
+             "If the question is about the video, use the context below.\n\n"
+             "Video Context:\n{context}"),
             *messages,
             ("human", "{input}")
         ])
 
-        combine_docs_chain = create_stuff_documents_chain(self.__llm, rag_prompt)
+        combine_docs_chain = create_stuff_documents_chain(
+            self.__llm, rag_prompt)
         retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
 
         result = retrieval_chain.invoke({"input": question})
-        
+
         return {
             "answer": result["answer"],
             "messages": [HumanMessage(content=question), AIMessage(content=result["answer"])]
@@ -219,10 +223,9 @@ class LanggraphService:
     def build_pipeline(self):
         if self.__graph is not None:
             return self.__graph
-            
+
         pipeline = StateGraph(MainState)
-        checkpointer = _GLOBAL_MEMORY_SAVER
-        
+        checkpointer = MEMORY_SAVER
         # Add nodes
         pipeline.add_node("upload_video", self.upload_video)
         pipeline.add_node("summarize_video", self.summarize_video)
