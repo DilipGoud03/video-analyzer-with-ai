@@ -26,7 +26,11 @@ class UtilityService:
         self.__langgraph_service = LanggraphService()
         asyncio.run(self.__langgraph_service.initialize_mcp())
         self.__graph = self.__langgraph_service.build_pipeline()
-        self.__config = {"configurable": {"thread_id": "12312"}}
+        self.__config = {
+            "configurable": {
+                "thread_id": st.session_state.get("video_name", "1234")
+            }
+        }
 
     # ------------------------------------------------------------
     # Method: generate_answer
@@ -37,7 +41,7 @@ class UtilityService:
     # ------------------------------------------------------------
     def generate_answer(self, path, video_name, question):        
         input = {"video_path": path, "video_name": video_name, "question": question,"messages": []}
-        state = self.__graph.invoke(input, self.__config)        
+        state = self.__graph.invoke(input, self.__config)
         return state.get('answer', '')
 
     # ------------------------------------------------------------
@@ -48,7 +52,7 @@ class UtilityService:
     #   generated summary text from the state dictionary.
     # ------------------------------------------------------------
     def generate_summary(self, path, video_name: str, is_new_video: bool, prompt=''):
-        inputs = {"video_path": path,"video_name": video_name,"is_new_video": is_new_video,"prompt": prompt}
+        inputs = {"video_path": path, "video_name": video_name, "is_new_video": is_new_video, "prompt": prompt}
         state = self.__graph.invoke(inputs, self.__config)  # type:ignore
         return state.get('summary', '')
 
