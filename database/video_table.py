@@ -37,6 +37,7 @@ class VideoTableService:
             query = "INSERT INTO `videos` (`video_name`, `video_type`) VALUES (%s, %s)"
             with self.__db.cursor() as cursor:
                 cursor.execute(query, (video_name, video_type))
+            self.__db.commit()
             return True
         return False
 
@@ -91,25 +92,36 @@ class VideoTableService:
     #   - Supports updating video type, category, and suitability.
     #   - Returns True on successful update.
     # ------------------------------------------------------------
-    def update_video(self, video_name: int, category: str, suitability: str) -> bool:
-        query = "UPDATE `videos` SET "
-        values = []
-        updates = []
+    def update_video(self, video_name: str, category: str = "", suitability: str = "") -> bool:
+        try:
+            updates = []
+            values = []
 
-        if video_name is not None:
-            updates.append("`video_name` = %s")
+            if category and category.strip() != "":
+                updates.append("`category` = %s")
+                values.append(category)
+
+            if suitability and suitability.strip() != "":
+                updates.append("`suitability` = %s")
+                values.append(suitability)
+
+            if not updates:
+                print("No fields to update.")
+                return False
+
+            query = f"UPDATE `videos` SET {', '.join(updates)} WHERE `video_name` = %s"
             values.append(video_name)
 
-        if category:
-            updates.append("`category` = %s")
-            values.append(category)
+            with self.__db.cursor() as cursor:
+                cursor.execute(query, tuple(values))
+                if cursor.rowcount == 0:
+                    print("No video found with that name.")
+                    return False
 
-        if suitability:
-            updates.append("`suitability` = %s")
-            values.append(suitability)
+            self.__db.commit()
+            return True
 
-        query += ", ".join(updates) + " WHERE `video_name` = %s"
-        values.append(video_name)
-        with self.__db.cursor() as cursor:
-            cursor.execute(query, tuple(values))
-        return True
+        except mysql.connector.Error as e:
+            print(f"MySQL error: {e}")
+            return False
+    

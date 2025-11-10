@@ -90,31 +90,24 @@ class LanggraphService:
         self.__mcp_client = None
         self.__graph = None
 
-
     # ------------------------------------------------------------
     # Async: initialize_mcp
     # Description:
     #   Starts the MCP stdio server (VideoDatabase) and loads
     #   all available tools for the LLM to use.
     # ------------------------------------------------------------
+
     async def initialize_mcp(self):
         print("Starting MCP initialization...")
         try:
-            server_path = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "mcp/server.py")
-            )
 
             self.__mcp_client = MultiServerMCPClient({
-                "VideoDatabase": {
-                    "transport": "stdio",
-                    "command": sys.executable,
-                    "args": [server_path],
-                }
+                "VideoDatabase": {"transport": "streamable_http", "url": "http://localhost:8000/mcp"}
             })
 
             # Fetch raw MCP tools
             raw_tools = await self.__mcp_client.get_tools()
-
+            print(raw_tools)
             # Convert each MCP tool → LangChain StructuredTool
             wrapped_tools = []
             for tool in raw_tools:
@@ -191,7 +184,7 @@ class LanggraphService:
 
         response = self.__llm.invoke([message])
         return {"summary": response.content}
-    
+
     # ------------------------------------------------------------
     # async Node: validate_and_update_video
     # Description:

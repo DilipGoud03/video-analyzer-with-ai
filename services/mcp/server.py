@@ -24,12 +24,10 @@ def update_video_metadata(video_name: str, category: str, suitability: str) -> s
 
     if success:
         msg = f"Updated metadata for {video_name}"
-        print(msg)
-        return msg
     else:
         msg = f"Update failed or video not found for {video_name}"
-        print(msg)
-        return msg
+    print(msg)
+    return msg
 
 
 # ------------------------------------------------------------
@@ -37,4 +35,4 @@ def update_video_metadata(video_name: str, category: str, suitability: str) -> s
 # ------------------------------------------------------------
 if __name__ == "__main__":
     print("Starting VideoMetadata MCP Server...")
-    mcp.run(transport="stdio")
+    mcp.run(transport="streamable-http")

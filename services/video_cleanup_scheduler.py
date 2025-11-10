@@ -1,4 +1,5 @@
-from apscheduler.schedulers.background import BackgroundScheduler
+# from apscheduler.schedulers.background import BackgroundScheduler
+from celery_app import app
 import os
 import time
 import logging
@@ -53,6 +54,7 @@ scheduler = BackgroundScheduler()
 #   is expected to start with a timestamp prefix (e.g., 1699478123_filename.mp4).
 #   Logs every action for audit and debugging purposes.
 # ------------------------------------------------------------
+@app.task
 def remove_temp_videos():
     logger.info("========= remove_temp_videos ============")
     current_time = int(time.time())
@@ -92,6 +94,7 @@ def remove_temp_videos():
 #   does not exist in the database. This ensures only valid,
 #   database-linked videos remain on disk.
 # ------------------------------------------------------------
+@app.task
 def remove_unwanted_videos():
     logger.info("========= remove_unwanted_videos =========")
 
@@ -119,13 +122,13 @@ def remove_unwanted_videos():
             logger.info(f"{fname} exists in the database — skipping removal.")
 
 
-# ------------------------------------------------------------
-# Scheduler Configuration
-# Description:
-#   Adds recurring jobs to the background scheduler for:
-#     1. Cleaning up temporary videos every 10 seconds
-#     2. Removing unwanted videos every 20 seconds
-#   These jobs run continuously in the background.
-# ------------------------------------------------------------
-scheduler.add_job(remove_temp_videos, 'interval', id='remove_temp_videos', seconds=10)
-scheduler.add_job(remove_unwanted_videos, 'interval', id='remove_unwanted_videos', seconds=20)
+# # ------------------------------------------------------------
+# # Scheduler Configuration
+# # Description:
+# #   Adds recurring jobs to the background scheduler for:
+# #     1. Cleaning up temporary videos every 10 seconds
+# #     2. Removing unwanted videos every 20 seconds
+# #   These jobs run continuously in the background.
+# # ------------------------------------------------------------
+# scheduler.add_job(remove_temp_videos, 'interval', id='remove_temp_videos', seconds=10)
+# scheduler.add_job(remove_unwanted_videos, 'interval', id='remove_unwanted_videos', seconds=20)
