@@ -159,9 +159,15 @@ class LanggraphService:
         encoded_video = base64.b64encode(uploaded_file["data"]).decode("utf-8")
         message = HumanMessage(
             content=[
-                {"type": "text", "text": prompt},
-                {"type": "media", "data": encoded_video,
-                    "mime_type": uploaded_file["mime_type"]},
+                {
+                    "type": "text",
+                    "text": prompt
+                },
+                {
+                    "type": "media",
+                    "data": encoded_video,
+                    "mime_type": uploaded_file["mime_type"]
+                },
             ]
         )
 
@@ -190,7 +196,9 @@ class LanggraphService:
             agent = create_agent(self.__llm, tools)
 
             result = await agent.ainvoke({
-                "messages": [HumanMessage(content=prompt)]
+                "messages": [
+                    HumanMessage(content=prompt)
+                ]
             })
 
             self.__logger.info(f"Result: {result}")
@@ -247,29 +255,34 @@ class LanggraphService:
         messages = state.get("messages", [])
 
         vector_db = self.__vector_service.vector_db()
-        retriever = vector_db.as_retriever(
-            search_kwargs={'filter': {"source": video_name}}
-        )
+        search_kwargs = {'filter': {"source": video_name}}
+        retriever = vector_db.as_retriever(search_kwargs=search_kwargs)
 
-        rag_prompt = ChatPromptTemplate.from_messages([
-            ("system",
-             "You are a helpful assistant. Answer only using conversation history and provided video context. "
-             "If the question is about previous conversation, use the chat history. "
-             "If the question is about the video, use the context below.\n\n"
-             "Video Context:\n{context}"),
+        prompt = ChatPromptTemplate.from_messages([
+            (
+                "system",
+                "You are a helpful assistant. Answer only using conversation history and provided video context. "
+                "If the question is about previous conversation, use the chat history. "
+                "If the question is about the video, use the context below.\n\n"
+                "Video Context:\n{context}"
+            ),
             *messages,
-            ("human", "{input}")
+            (
+                "human", "{input}"
+            )
         ])
 
-        combine_docs_chain = create_stuff_documents_chain(
-            self.__llm, rag_prompt)
+        combine_docs_chain = create_stuff_documents_chain(self.__llm, prompt)
         retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
 
         result = retrieval_chain.invoke({"input": question})
 
         return {
             "answer": result["answer"],
-            "messages": [HumanMessage(content=question), AIMessage(content=result["answer"])]
+            "messages": [
+                HumanMessage(content=question),
+                AIMessage(content=result["answer"])
+            ]
         }
 
     # ------------------------------------------------------------
