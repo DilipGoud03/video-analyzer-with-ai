@@ -1,4 +1,5 @@
 from langgraph.checkpoint.memory import MemorySaver
+from langchain.agents import create_agent
 from typing import TypedDict, Optional, Annotated
 from langgraph.graph import StateGraph, START, END
 from decouple import config
@@ -10,8 +11,8 @@ from langgraph.graph.message import add_messages
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, AIMessage, AnyMessage
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain.chains.retrieval import create_retrieval_chain
+from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+from langchain_classic.chains.retrieval import create_retrieval_chain
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from services.vector_store import VectorStoreService
 from services.llm import LLMService
@@ -86,7 +87,6 @@ class LanggraphService:
         # ------------------------------------------------------------
         self.__vector_service = VectorStoreService()
         self.__llm = LLMService().get_chat_model()
-        self.__llm_with_tools = None
         self.__mcp_client = None
         self.__graph = None
         self.__logger = setup_logger(__name__)
@@ -104,31 +104,12 @@ class LanggraphService:
             self.__mcp_client = MultiServerMCPClient({
                 "VideoDatabase": {"transport": "streamable_http", "url": "http://localhost:8000/mcp"}
             })
-
-            # Fetch raw MCP tools
-            raw_tools = await self.__mcp_client.get_tools()
-            wrapped_tools = []
-            for tool in raw_tools:
-                async def _call_tool(**kwargs):
-                    return await self.__mcp_client.call_tool(tool.name, kwargs)
-
-                wrapped_tool = StructuredTool.from_function(
-                    func=_call_tool,
-                    name=tool.name,
-                    description=tool.description or "MCP tool",
-                )
-                wrapped_tools.append(wrapped_tool)
-
-            self.__llm_with_tools = self.__llm.bind_tools(wrapped_tools)
-
             self.__logger.info("LLM successfully bound with MCP tools.")
-            return wrapped_tools
+            return self.__mcp_client
 
         except Exception as e:
             self.__logger.error(f"MCP initialization failed: {e}")
             traceback.print_exc()
-            self.__mcp_tools = []
-            self.__llm_with_tools = self.__llm
             return []
 
     # ------------------------------------------------------------
@@ -201,12 +182,14 @@ class LanggraphService:
                 Call update_video_metadata with video_name='{state['video_name']}', category, suitability.
             """
 
-            response = await self.__llm_with_tools.ainvoke([HumanMessage(content=prompt)])
-            if hasattr(response, "tool_calls") and response.tool_calls:
-                for call in response.tool_calls:
-                    async with self.__mcp_client.session("VideoDatabase") as session:
-                        data = await session.call_tool(call["name"], arguments=call["args"]["kwargs"])
-                        self.__logger.info(f"===validate_and_update_video===, {data}")
+            tools = await self.__mcp_client.get_tools()
+            agent = create_agent(self.__llm, tools)
+            
+            result = await agent.ainvoke({
+                "messages": [HumanMessage(content=prompt)]
+            })
+            
+            self.__logger.info(f"Result: {result}")
         return {}
 
     # ------------------------------------------------------------
@@ -321,8 +304,8 @@ class LanggraphService:
             START,
             self.conditional_node,
             {
-                "upload_video": "upload_video",
                 "ask_question": "ask_question",
+                "upload_video": "upload_video",
             },
         )
 
