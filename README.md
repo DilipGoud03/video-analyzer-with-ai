@@ -1,82 +1,94 @@
-# video-analyzer-with-ai
+# Video Analyzer with AI
 
-A starter project layout for analyzing video with AI tools. This repository provides a place to add scripts that extract audio/video, run models (speech-to-text, vision models, etc.), and produce analysis results. The README below explains recommended dependencies, setup, and usage examples to get you started quickly.
+![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
+![Streamlit](https://img.shields.io/badge/Streamlit-App-red?logo=streamlit)
+![LangChain](https://img.shields.io/badge/LangChain-Framework-green?logo=chainlink)
+![LangGraph](https://img.shields.io/badge/LangGraph-Orchestration-orange?logo=graph)
+![ChromaDB](https://img.shields.io/badge/ChromaDB-VectorStore-purple?logo=databricks)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-## Features (suggested)
-- Extract frames from videos
-- Extract audio and transcribe speech with an AI model (e.g., OpenAI/Whisper or other STT)
-- Run object detection / classification on frames
-- Aggregate results and export reports
+**Video Analyzer with AI** is an advanced AI-powered tool built using **LangChain**, **LangGraph**, and **ChromaDB**.  
+It analyzes videos, generates summaries, stores them in a vector database, and enables interactive **question-answering** about the video content.  
 
-## Requirements
-This project depends on system-level tools and Python packages.
+All of this is wrapped inside a **Streamlit** UI for a seamless user experience.
 
-System requirements
-- Python 3.8+
-- ffmpeg installed and on PATH (required for many video/audio libraries)
+---
 
-Environment variables
-- OPENAI_API_KEY (if you use the OpenAI API)
-- Any other model/service keys you decide to use (documented in your scripts)
+## Key Features
 
-## Install (recommended)
-Create and activate a virtual environment, then install Python dependencies:
+- **LangChain + LangGraph Pipeline** – Graph-based orchestration of video analysis stages.  
+- **Automatic Summarization** – Extract concise summaries from video transcripts.  
+- **Q&A over Stored Context** – Ask questions about previously processed videos using **ChromaDB** for retrieval.  
+- **Persistent Memory** – Video summaries are embedded and stored for future re-querying.   
+- **Streamlit Frontend** – Simple and modern web interface.  
+- **Environment-Based Config** – Plug in your OpenAI, Gemini, keys easily.  
 
-```bash
-python -m venv .venv
-# macOS / Linux
-source .venv/bin/activate
-# Windows (PowerShell)
-.venv\Scripts\Activate.ps1
+## LangChain + LangGraph Integration
 
-pip install -r requirements.txt
-```
+LangChain provides the core building blocks for LLM interactions (prompts, chains, and tools).  
+**LangGraph** orchestrates these blocks into a **graph-based workflow**, making multi-step reasoning and tool execution seamless.
 
-Make sure ffmpeg is installed on your system. On macOS you can use Homebrew:
-```bash
-brew install ffmpeg
-```
-On Ubuntu:
-```bash
-sudo apt update
-sudo apt install ffmpeg
-```
+### Example Flow
+Video Input
+→
+Transcription Node
+→
+Summarization Node (LangChain)
+→
+Q&A Node (LangGraph Conditional Edge)
+→
+Result → Display on Streamlit
 
-## Usage (example)
-Below are example steps you can adapt to your scripts.
 
-1. Extract audio and transcribe (pseudo-command):
-```bash
-python scripts/extract_audio.py --input videos/input.mp4 --output audio.wav
-python scripts/transcribe.py --input audio.wav --api-key $OPENAI_API_KEY
-```
+## Tech Stack
 
-2. Extract frames and run analysis:
-```bash
-python scripts/extract_frames.py --input videos/input.mp4 --output frames/
-python scripts/analyze_frames.py --frames frames/ --model yolov5
-```
+| Category | Tools / Libraries |
+|-----------|------------------|
+| **Language** | Python 3.10+ |
+| **Frontend** | Streamlit |
+| **AI / LLMs** | LangChain, LangGraph, OpenAI, Google Gemini |
+| **Vector Database** | ChromaDB |
+| **Embeddings** | GoogleGenerativeAIEmbeddings, OpenAIEmbeddings |
+| **Environment** | Python-dotenv|
 
-3. Aggregate results into a single report (CSV/JSON):
-```bash
-python scripts/aggregate_results.py --input results/ --output report.json
-```
+## Installation
 
-(These script names are examples — add actual scripts in the `scripts/` directory and update README usage accordingly.)
+1. **Clone this repo**
 
-## Notes and recommendations
-- Use python-dotenv or similar to load environment variables from a .env file for local development (remember to keep .env in .gitignore).
-- If you plan to use heavy models (e.g., PyTorch/transformers), prefer a GPU-enabled environment and install the appropriate CUDA-enabled torch build.
-- For running as an API, consider FastAPI + Uvicorn for serving analysis endpoints.
+   ```bash
+   git clone https://github.com/DilipGoud03/video-analyzer-with-ai.git
+    cd video-analyzer-with-ai
+   ```
+   
+2. **Create and Activate virtual Enviorment**
 
-## Contributing
-- Add new scripts under `scripts/` or modules under a package (e.g., `video_analyzer/`).
-- Keep requirements in `requirements.txt` up to date.
-- Document how to run and reproduce results in README or a docs folder.
+   1. Create a virtual environment.
 
-## License
-Add a LICENSE file (e.g., MIT) if you want an open source license. If you'd like, I can add a LICENSE file for you.
+      ```bash
+      python -m venv video-analyzer-venv
+      ```
 
-## Help / Next steps
-- Add your actual scripts (extract, transcribe, analyze) and I'll update the README usage with real commands.
-- If you want, I can create a GitHub Actions workflow, Dockerfile, or example scripts next.
+   2. Activate virtual environment.
+
+      ```bash
+      source video-analyzer-venv/bin/activate
+      ```
+2. **Install dependencies**
+
+      ```bash
+      pip install -r requirements.txt
+      ```
+
+3. **Configure environment**
+   - Copy `.env-copy` to `.env`
+   - Fill in your DB credentials, API key etc.
+
+4. **Start the server**
+   ```bash
+   streamlit run app.py
+
+   ```
+
+##  How to Use
+The project uses **LangGraph** to control the workflow and **LangChain** tools for LLM reasoning and embeddings.  
+Summaries are stored in **ChromaDB** to enable retrieval-augmented generation (RAG) for video Q&A.
