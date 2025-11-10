@@ -1,6 +1,7 @@
 import streamlit as st
 from services.lang_graph import LanggraphService
 import asyncio
+from logger_app import setup_logger
 
 # ------------------------------------------------------------
 # Class: UtilityService
@@ -21,9 +22,11 @@ class UtilityService:
     # Description:
     #   Initializes a configuration dictionary that stores
     #   a unique thread_id for each Streamlit session.
+    #   Logging is configured for visibility and debugging.
     # ------------------------------------------------------------
     def __init__(self) -> None:
         self.__langgraph_service = LanggraphService()
+        self.__logger = setup_logger(__name__)
         asyncio.run(self.__langgraph_service.initialize_mcp())
         self.__graph = self.__langgraph_service.build_pipeline()
         self.__config = {
@@ -39,8 +42,10 @@ class UtilityService:
     #   previously generated summaries stored in the vector DB.
     #   The response is produced via the LangGraph workflow.
     # ------------------------------------------------------------
-    def generate_answer(self, path, video_name, question):        
-        input = {"video_path": path, "video_name": video_name, "question": question,"messages": []}
+    def generate_answer(self, path, video_name, question):
+        input = {"video_path": path, "video_name": video_name,
+                 "question": question, "messages": []}
+        self.__logger.info(f"===generate_answer===:{input}")
         state = self.__graph.invoke(input, self.__config)
         return state.get('answer', '')
 

@@ -108,7 +108,6 @@ class LanggraphService:
             # Fetch raw MCP tools
             raw_tools = await self.__mcp_client.get_tools()
             print(raw_tools)
-            # Convert each MCP tool → LangChain StructuredTool
             wrapped_tools = []
             for tool in raw_tools:
                 async def _call_tool(**kwargs):
