@@ -23,7 +23,7 @@ from langchain_core.tools import StructuredTool
 import os
 import mimetypes
 import base64
-
+from logger_app import setup_logger
 
 # ------------------------------------------------------------
 # Global: MEMORY_SAVER
@@ -89,6 +89,7 @@ class LanggraphService:
         self.__llm_with_tools = None
         self.__mcp_client = None
         self.__graph = None
+        self.__logger = setup_logger(__name__)
 
     # ------------------------------------------------------------
     # Async: initialize_mcp
@@ -98,35 +99,35 @@ class LanggraphService:
     # ------------------------------------------------------------
 
     async def initialize_mcp(self):
-        print("Starting MCP initialization...")
         try:
+            if self.__llm_with_tools and self.__llm_with_tools is None:
+                self.__logger.info("Starting MCP initialization...")
+                self.__mcp_client = MultiServerMCPClient({
+                    "VideoDatabase": {"transport": "streamable_http", "url": "http://localhost:8000/mcp"}
+                })
 
-            self.__mcp_client = MultiServerMCPClient({
-                "VideoDatabase": {"transport": "streamable_http", "url": "http://localhost:8000/mcp"}
-            })
+                # Fetch raw MCP tools
+                raw_tools = await self.__mcp_client.get_tools()
+                self.__logger.info(raw_tools)
+                wrapped_tools = []
+                for tool in raw_tools:
+                    async def _call_tool(**kwargs):
+                        return await self.__mcp_client.call_tool(tool.name, kwargs)
 
-            # Fetch raw MCP tools
-            raw_tools = await self.__mcp_client.get_tools()
-            print(raw_tools)
-            wrapped_tools = []
-            for tool in raw_tools:
-                async def _call_tool(**kwargs):
-                    return await self.__mcp_client.call_tool(tool.name, kwargs)
+                    wrapped_tool = StructuredTool.from_function(
+                        func=_call_tool,
+                        name=tool.name,
+                        description=tool.description or "MCP tool",
+                    )
+                    wrapped_tools.append(wrapped_tool)
 
-                wrapped_tool = StructuredTool.from_function(
-                    func=_call_tool,
-                    name=tool.name,
-                    description=tool.description or "MCP tool",
-                )
-                wrapped_tools.append(wrapped_tool)
+                self.__llm_with_tools = self.__llm.bind_tools(wrapped_tools)
 
-            self.__llm_with_tools = self.__llm.bind_tools(wrapped_tools)
-
-            print("LLM successfully bound with MCP tools.")
-            return wrapped_tools
+                self.__logger.info("LLM successfully bound with MCP tools.")
+                return wrapped_tools
 
         except Exception as e:
-            print(f"MCP initialization failed: {e}")
+            self.__logger.error(f"MCP initialization failed: {e}")
             traceback.print_exc()
             self.__mcp_tools = []
             self.__llm_with_tools = self.__llm
@@ -207,7 +208,7 @@ class LanggraphService:
                 for call in response.tool_calls:
                     async with self.__mcp_client.session("VideoDatabase") as session:
                         data = await session.call_tool(call["name"], arguments=call["args"]["kwargs"])
-                        print("data", data)
+                        self.__logger.info("data", data)
         return {}
 
     # ------------------------------------------------------------
@@ -243,7 +244,7 @@ class LanggraphService:
                     vector_db.add_documents(documents=documents, ids=uuids)
                 return {}
             except Exception as e:
-                print(f"Error saving summary: {e}")
+                self.__logger.error(f"Error saving summary: {e}")
         return {}
 
     # ------------------------------------------------------------

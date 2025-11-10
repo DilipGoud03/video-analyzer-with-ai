@@ -1,6 +1,7 @@
 from enum import Enum
 
 class SuitabilityEnum(str, Enum):
+    ALL = 'all'
     UNDER_5 = 'under_5'
     UNDER_10 = 'under_10'
     UNDER_13 = 'under_13'

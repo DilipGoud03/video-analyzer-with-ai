@@ -68,7 +68,7 @@ class VideoTableService:
         try:
             query = "SELECT * FROM `videos`"
             values = []
-            if suitability:
+            if suitability and suitability != SuitabilityEnum.ALL:
                 query += " WHERE `suitability` = %s"
                 values.append(suitability)
 

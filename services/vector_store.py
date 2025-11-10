@@ -2,7 +2,7 @@ from decouple import config
 import os
 from langchain_chroma import Chroma
 from services.llm import LLMService
-
+from logger_app import setup_logger
 # ------------------------------------------------------------
 # Class: VectorStoreService
 # Description:
@@ -18,12 +18,12 @@ class VectorStoreService:
     # Method: __init__
     # Description:
     #   Initializes the vector database directory (if missing)
-    #   and sets up the embedding and LLM instances via LLMService.
+    #   and set up the embedding instances via LLMService.
+    #   also setup the logger for traking and debug data
     # ------------------------------------------------------------
     def __init__(self):
         self.__embedding = LLMService().get_embedding_model()
-        self.__llm = LLMService().get_chat_model()
-
+        self.__logger = setup_logger(__name__)
     # ------------------------------------------------------------
     # Method: vector_db
     # Description:
@@ -34,7 +34,9 @@ class VectorStoreService:
     #   This provides a persistent storage layer for semantic
     #   search and similarity-based retrieval operations.
     # ------------------------------------------------------------
+
     def vector_db(self):
+        self.__logger.info("===vector_db===")
         return Chroma(
             collection_name="video_summaries",
             embedding_function=self.__embedding,
@@ -47,13 +49,14 @@ class VectorStoreService:
     #   Removes document embeddings from Chroma store.
     # ------------------------------------------------------------
     def _delete_documents(self, file_name):
+        self.__logger.info("===_delete_documents===")
         vector_store = self.vector_db()
         # Delete all documents for a specific video
         try:
+            self.__logger.info("===_delete_documents->try===")
             vector_store.delete(where={"source": file_name})
         except Exception as e:
-            print(f"No documents found or error deleting: {e}")
-            # Continue without error
+            self.__logger.error(f"===_delete_documents->except=== {str(e)}")
 
         return True
 
@@ -64,5 +67,5 @@ class VectorStoreService:
     # ------------------------------------------------------------
     def get_documents(self):
         vector_store = self.vector_db()
-        print(vector_store.get())
+        self.__logger.info(f"===_delete_documents->except=== {vector_store.get()}")
         return True
