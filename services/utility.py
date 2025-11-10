@@ -1,7 +1,12 @@
 import streamlit as st
 from services.lang_graph import LanggraphService
+from database.video_table import VideoTableService
+from services.vector_store import VectorStoreService
 import asyncio
 from logger_app import setup_logger
+from decouple import config
+import os
+import time
 
 # ------------------------------------------------------------
 # Class: UtilityService
@@ -16,13 +21,17 @@ from logger_app import setup_logger
 # ------------------------------------------------------------
 
 
-class UtilityService:   
+class UtilityService:
     # ------------------------------------------------------------
     # Method: __init__
     # Description:
     #   Initializes a configuration dictionary that stores
     #   a unique thread_id for each Streamlit session.
     #   Logging is configured for visibility and debugging.
+    #   Handles automated cleanup of temporary and unwanted video
+    #   files using scheduled background jobs. Ensures that:
+    #     - Old temporary uploads are periodically deleted
+    #     - Unreferenced videos (not in DB) are removed
     # ------------------------------------------------------------
     def __init__(self) -> None:
         self.__langgraph_service = LanggraphService()
@@ -34,6 +43,10 @@ class UtilityService:
                 "thread_id": st.session_state.get("video_name", "1234")
             }
         }
+        self.org_dir = config('ORG_DIR')
+        self.temp_dir = config('TEMP_DIR')
+        self.__video_table_service = VideoTableService()
+        self.__vector_store_service = VectorStoreService()
 
     # ------------------------------------------------------------
     # Method: generate_answer
@@ -57,7 +70,8 @@ class UtilityService:
     #   generated summary text from the state dictionary.
     # ------------------------------------------------------------
     def generate_summary(self, path, video_name: str, is_new_video: bool, prompt=''):
-        inputs = {"video_path": path, "video_name": video_name, "is_new_video": is_new_video, "prompt": prompt}
+        inputs = {"video_path": path, "video_name": video_name,
+                  "is_new_video": is_new_video, "prompt": prompt}
         state = self.__graph.invoke(inputs, self.__config)  # type:ignore
         return state.get('summary', '')
 
@@ -78,7 +92,8 @@ class UtilityService:
 
         # --- Left Column: Type & Duration ---
         with col0:
-            summary_type = st.radio("**Summary Type:**", ["Short summary", "Full explanation"])
+            summary_type = st.radio(
+                "**Summary Type:**", ["Short summary", "Full explanation"])
             summary_duration = st.number_input(
                 "**Select Duration (in minutes):**",
                 min_value=0,
@@ -104,13 +119,16 @@ class UtilityService:
 
         # --- Build Prompt Based on Selections ---
         if summary_type:
-            prompt_parts.append(f"Generate a {summary_type.lower()} of the given video.")
+            prompt_parts.append(
+                f"Generate a {summary_type.lower()} of the given video.")
 
         if summary_duration:
-            prompt_parts.append(f"The summary should be in {summary_duration} minute(s).")
+            prompt_parts.append(
+                f"The summary should be in {summary_duration} minute(s).")
 
         if summary_language:
-            prompt_parts.append(f"Write the summary in {summary_language} language.")
+            prompt_parts.append(
+                f"Write the summary in {summary_language} language.")
 
         if age:
             if age <= 18:
@@ -156,3 +174,80 @@ class UtilityService:
         m = int(seconds) // 60
         s = int(seconds) % 60
         return f"{m}:{s:02d}"
+
+    # ------------------------------------------------------------
+    # Method: remove_org_videos
+    # Description:
+    #   Scans the org_dir for video files and deletes any file that
+    #   does not exist in the database. This ensures only valid,
+    #   database-linked videos remain on disk.
+    # ------------------------------------------------------------
+    def remove_org_videos(self):
+        self.__logger.info("========= remove_org_videos =========")
+
+        for fname in os.listdir(self.org_dir):
+            path = os.path.join(self.org_dir, fname)
+            self.__logger.info(f"Processing file: {fname}")
+
+            # Skip non-file paths
+            if not os.path.isfile(path):
+                self.__logger.debug("Skipping non-file path: %s", path)
+                continue
+
+            # Check if file exists in the database
+            video_data = self.__video_table_service.get_video_by_name(fname)
+            self.__logger.debug(f"DB Lookup for {fname}: {video_data}")
+
+            if not video_data:
+                try:
+                    os.remove(path)
+                    self.__vector_store_service._delete_documents(fname)
+                    self.__logger.info("Removed unwanted video: %s", path)
+                except OSError:
+                    self.__logger.exception(
+                        "Failed to remove unwanted video: %s", path)
+            else:
+                self.__logger.info(
+                    f"{fname} exists in the database — skipping removal.")
+
+    # ------------------------------------------------------------
+    # Method: remove_temp_videos
+    # Description:
+    #   Iterates through the TEMP_DIR and removes any temporary
+    #   video files older than 180 seconds (3 minutes). Each file
+    #   is expected to start with a timestamp prefix (e.g., 1699478123_filename.mp4).
+    #   Logs every action for audit and debugging purposes.
+    # ------------------------------------------------------------
+
+    def remove_temp_videos(self):
+        self.__logger.info("========= remove_temp_videos ============")
+        current_time = int(time.time())
+        cutoff = current_time - 180  # 3-minute age limit
+
+        for fname in os.listdir(self.temp_dir):
+            uploaded_time = 0
+            self.__logger.info("========= Processing file entry ==========")
+            path = os.path.join(self.temp_dir, fname)
+
+            # Skip directories
+            if not os.path.isfile(path):
+                self.__logger.debug("Skipping non-file path: %s", path)
+                continue
+
+            try:
+                uploaded_time = int(fname.split('_', 1)[0])
+            except (ValueError, IndexError):
+                self.__logger.debug("Skipping non-timestamp file: %s", path)
+                continue
+
+            self.__logger.info(
+                f"Uploaded time: {uploaded_time}, Current time: {current_time}, Cutoff: {cutoff}")
+
+            # Delete if file timestamp <= cutoff
+            if uploaded_time > 0 and uploaded_time <= cutoff:
+                try:
+                    os.remove(path)
+                    self.__logger.info("Removed temp video: %s", path)
+                except OSError:
+                    self.__logger.exception(
+                        "Failed to remove temp video: %s", path)
