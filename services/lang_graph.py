@@ -100,31 +100,29 @@ class LanggraphService:
 
     async def initialize_mcp(self):
         try:
-            if self.__llm_with_tools and self.__llm_with_tools is None:
-                self.__logger.info("Starting MCP initialization...")
-                self.__mcp_client = MultiServerMCPClient({
-                    "VideoDatabase": {"transport": "streamable_http", "url": "http://localhost:8000/mcp"}
-                })
+            self.__logger.info("Starting MCP initialization...")
+            self.__mcp_client = MultiServerMCPClient({
+                "VideoDatabase": {"transport": "streamable_http", "url": "http://localhost:8000/mcp"}
+            })
 
-                # Fetch raw MCP tools
-                raw_tools = await self.__mcp_client.get_tools()
-                self.__logger.info(raw_tools)
-                wrapped_tools = []
-                for tool in raw_tools:
-                    async def _call_tool(**kwargs):
-                        return await self.__mcp_client.call_tool(tool.name, kwargs)
+            # Fetch raw MCP tools
+            raw_tools = await self.__mcp_client.get_tools()
+            wrapped_tools = []
+            for tool in raw_tools:
+                async def _call_tool(**kwargs):
+                    return await self.__mcp_client.call_tool(tool.name, kwargs)
 
-                    wrapped_tool = StructuredTool.from_function(
-                        func=_call_tool,
-                        name=tool.name,
-                        description=tool.description or "MCP tool",
-                    )
-                    wrapped_tools.append(wrapped_tool)
+                wrapped_tool = StructuredTool.from_function(
+                    func=_call_tool,
+                    name=tool.name,
+                    description=tool.description or "MCP tool",
+                )
+                wrapped_tools.append(wrapped_tool)
 
-                self.__llm_with_tools = self.__llm.bind_tools(wrapped_tools)
+            self.__llm_with_tools = self.__llm.bind_tools(wrapped_tools)
 
-                self.__logger.info("LLM successfully bound with MCP tools.")
-                return wrapped_tools
+            self.__logger.info("LLM successfully bound with MCP tools.")
+            return wrapped_tools
 
         except Exception as e:
             self.__logger.error(f"MCP initialization failed: {e}")
@@ -199,7 +197,7 @@ class LanggraphService:
             prompt = f"""
                 Analyze the video summary: '{summary}'.
                 Determine category (Like in Film & Animation, Autos & Vehicles, Pets & Animals, Travel & Events, People & Blogs, News & Politics, Science & Technology, Howto & Style, Nonprofits & Activism, Music, Sports, Short, Movies Education, Gaming, Videoblogging, Comedy, Entertainment, Movies, Anime/Animation, Action/Adventure, Sci-Fi/Fantasy, Classics, Comedy, Documentary, Drama, Family, Foreign, Horror, Thriller, Shorts, Shows, Trailers) 
-                and suitability (use ONLY: 'under_5, 'under_10','under_13','under_16','under_18','adult').
+                and suitability (use ONLY: 'under_5, 'under_10','under_13','under_16','under_18','adult', 'all').
                 Call update_video_metadata with video_name='{state['video_name']}', category, suitability.
             """
 
@@ -208,7 +206,7 @@ class LanggraphService:
                 for call in response.tool_calls:
                     async with self.__mcp_client.session("VideoDatabase") as session:
                         data = await session.call_tool(call["name"], arguments=call["args"]["kwargs"])
-                        self.__logger.info("data", data)
+                        self.__logger.info(f"===validate_and_update_video===, {data}")
         return {}
 
     # ------------------------------------------------------------

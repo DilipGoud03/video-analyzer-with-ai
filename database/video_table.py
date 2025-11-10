@@ -1,6 +1,6 @@
 from database.connection import Connection
 import mysql.connector
-from enumeration.suitability import SuitabilityEnum
+from enumeration.suitability import SuitableForEnum
 
 # ------------------------------------------------------------
 # Class: VideoTableService
@@ -64,17 +64,37 @@ class VideoTableService:
     #   - Supports keyword search (ID, name, category) and suitability
     #   - Returns a list of dictionaries containing video details.
     # ------------------------------------------------------------
-    def video_list(self, suitability: SuitabilityEnum, filter: str = ""):
+    def video_list(self, suitability: SuitableForEnum, filter: str = ""):
         try:
             query = "SELECT * FROM `videos`"
             values = []
-            if suitability and suitability != SuitabilityEnum.ALL:
-                query += " WHERE `suitability` = %s"
-                values.append(suitability)
+            where_clauses = False
+            if suitability:
+                where_clauses = True
+                if suitability == SuitableForEnum.ALL:
+                    where_clauses = False
+                    pass
+                if suitability == SuitableForEnum.UNDER_5:
+                    query += " WHERE suitability IN ('all', 'under_5')"
+                elif suitability == SuitableForEnum.UNDER_10:
+                    query += " WHERE suitability IN ('all', 'under_5', 'under_10')"
+                elif suitability == SuitableForEnum.UNDER_13:
+                    query += " WHERE suitability IN ('all', 'under_5', 'under_10', 'under_13')"
+                elif suitability == SuitableForEnum.UNDER_16:
+                    query += " WHERE suitability IN ('all', 'under_5', 'under_10', 'under_13', 'under_16')"
+                elif suitability == SuitableForEnum.UNDER_18:
+                    query += " WHERE suitability IN ('all', 'under_5', 'under_10', 'under_13', 'under_16', 'under_18')"
+                elif suitability == SuitableForEnum.ADULT:
+                    query += " WHERE suitability IN ('all', 'under_5', 'under_10', 'under_13', 'under_16', 'under_18')"
 
             if filter:
-                query += " AND (`id` LIKE %s OR `video_name` LIKE %s OR `category` LIKE %s)"
-                search = f"%{filter}%"
+                if where_clauses == True:
+                    query += " AND "
+                else:
+                    query += " WHERE "
+
+                query += "(`id` LIKE %s OR `video_name` LIKE %s OR `category` LIKE %s)"
+                search= f"%{filter}%"
                 values.extend([search, search, search])
 
             with self.__db.cursor(dictionary=True) as cursor:
@@ -92,10 +112,10 @@ class VideoTableService:
     #   - Supports updating video type, category, and suitability.
     #   - Returns True on successful update.
     # ------------------------------------------------------------
-    def update_video(self, video_name: str, category: str = "", suitability: str = "") -> bool:
+    def update_video(self, video_name: str, category: str="", suitability: str="") -> bool:
         try:
-            updates = []
-            values = []
+            updates= []
+            values= []
 
             if category and category.strip() != "":
                 updates.append("`category` = %s")
@@ -109,7 +129,7 @@ class VideoTableService:
                 print("No fields to update.")
                 return False
 
-            query = f"UPDATE `videos` SET {', '.join(updates)} WHERE `video_name` = %s"
+            query= f"UPDATE `videos` SET {', '.join(updates)} WHERE `video_name` = %s"
             values.append(video_name)
 
             with self.__db.cursor() as cursor:
@@ -124,4 +144,3 @@ class VideoTableService:
         except mysql.connector.Error as e:
             print(f"MySQL error: {e}")
             return False
-    

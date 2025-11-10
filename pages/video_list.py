@@ -4,7 +4,7 @@ from moviepy.video.io.VideoFileClip import VideoFileClip
 from services.utility import UtilityService
 from database.video_table import VideoTableService
 from decouple import config
-from enumeration.suitability import SuitabilityEnum
+from enumeration.suitability import SuitableForEnum
 
 # Initialize services and configuration
 video_table = VideoTableService()
@@ -47,9 +47,9 @@ with col0:
     )
 with col1:
     suitable = st.selectbox(
-        label="**suitable**",
+        label="**suitable for**",
         key="suitable",
-        options=SuitabilityEnum
+        options=SuitableForEnum
     )
 
 # Section: Video Listing

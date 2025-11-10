@@ -1,6 +1,6 @@
 from enum import Enum
 
-class SuitabilityEnum(str, Enum):
+class SuitableForEnum(str, Enum):
     ALL = 'all'
     UNDER_5 = 'under_5'
     UNDER_10 = 'under_10'
