@@ -16,3 +16,4 @@ langchain-openai==0.3.0
 langchain-google-genai==2.0.0
 chromadb==0.5.3
 celery
+redis

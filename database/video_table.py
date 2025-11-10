@@ -23,7 +23,17 @@ class VideoTableService:
     # ------------------------------------------------------------
     def __init__(self):
         self.__connection = Connection()
-        self.__db = self.__connection.connect_db()
+        self.__db = None
+    
+    # ------------------------------------------------------------
+    # Method: _connect
+    # Description:
+    #   Ensures a database connection is established.
+    #   If no connection exists, it creates a new one.
+    # ------------------------------------------------------------
+    def _connect(self):
+        if self.__db is None or not self.__db.is_connected():
+            self.__db = self.__connection.connect_db()
 
     # ------------------------------------------------------------
     # Method: add_video
@@ -32,7 +42,9 @@ class VideoTableService:
     #   - Prevents duplicates by checking existing records first.
     #   - Returns True if insertion is successful, False otherwise.
     # ------------------------------------------------------------
+
     def add_video(self, video_name: str, video_type: int) -> bool:
+        self._connect()
         if not self.get_video_by_name(video_name):
             query = "INSERT INTO `videos` (`video_name`, `video_type`) VALUES (%s, %s)"
             with self.__db.cursor() as cursor:
@@ -50,6 +62,7 @@ class VideoTableService:
     # ------------------------------------------------------------
     def get_video_by_name(self, name: str):
         try:
+            self._connect()
             query = "SELECT * FROM `videos` WHERE `video_name` = %s"
             with self.__db.cursor(dictionary=True) as cursor:
                 cursor.execute(query, (name,))
@@ -66,6 +79,7 @@ class VideoTableService:
     # ------------------------------------------------------------
     def video_list(self, suitability: SuitableForEnum, filter: str = ""):
         try:
+            self._connect()
             query = "SELECT * FROM `videos`"
             values = []
             where_clauses = False
@@ -94,7 +108,7 @@ class VideoTableService:
                     query += " WHERE "
 
                 query += "(`id` LIKE %s OR `video_name` LIKE %s OR `category` LIKE %s)"
-                search= f"%{filter}%"
+                search = f"%{filter}%"
                 values.extend([search, search, search])
 
             with self.__db.cursor(dictionary=True) as cursor:
@@ -112,10 +126,11 @@ class VideoTableService:
     #   - Supports updating video type, category, and suitability.
     #   - Returns True on successful update.
     # ------------------------------------------------------------
-    def update_video(self, video_name: str, category: str="", suitability: str="") -> bool:
+    def update_video(self, video_name: str, category: str = "", suitability: str = "") -> bool:
         try:
-            updates= []
-            values= []
+            self._connect()
+            updates = []
+            values = []
 
             if category and category.strip() != "":
                 updates.append("`category` = %s")
@@ -129,7 +144,7 @@ class VideoTableService:
                 print("No fields to update.")
                 return False
 
-            query= f"UPDATE `videos` SET {', '.join(updates)} WHERE `video_name` = %s"
+            query = f"UPDATE `videos` SET {', '.join(updates)} WHERE `video_name` = %s"
             values.append(video_name)
 
             with self.__db.cursor() as cursor:
