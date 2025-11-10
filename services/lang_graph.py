@@ -20,7 +20,6 @@ from uuid import uuid4
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import traceback
 import asyncio
-from langchain_core.tools import StructuredTool
 import os
 import mimetypes
 import base64
@@ -101,9 +100,14 @@ class LanggraphService:
     async def initialize_mcp(self):
         try:
             self.__logger.info("Starting MCP initialization...")
-            self.__mcp_client = MultiServerMCPClient({
-                "VideoDatabase": {"transport": "streamable_http", "url": "http://localhost:8000/mcp"}
-            })
+            self.__mcp_client = MultiServerMCPClient(
+                {
+                    "VideoDatabase": {
+                        "transport": "streamable_http",
+                        "url": "http://localhost:8000/mcp"
+                    }
+                }
+            )
             self.__logger.info("LLM successfully bound with MCP tools.")
             return self.__mcp_client
 
@@ -184,11 +188,11 @@ class LanggraphService:
 
             tools = await self.__mcp_client.get_tools()
             agent = create_agent(self.__llm, tools)
-            
+
             result = await agent.ainvoke({
                 "messages": [HumanMessage(content=prompt)]
             })
-            
+
             self.__logger.info(f"Result: {result}")
         return {}
 
