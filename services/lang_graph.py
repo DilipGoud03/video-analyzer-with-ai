@@ -183,32 +183,32 @@ class LanggraphService:
     # ------------------------------------------------------------
 
     async def validate_and_update_video(self, state: MainState):
-        # if state.get("is_new_video") and state["is_new_video"] is True:
-        summary = state.get("summary", "No summary available")
-        prompt = f"""
-            You are a video content analyst.
+        if state.get("is_new_video") and state["is_new_video"] is True:
+            summary = state.get("summary", "No summary available")
+            prompt = f"""
+                You are a video content analyst.
 
-            Analyze the following video summary and determine:
-            1. The most appropriate **category** of the video (freely infer it from context — e.g., talk show, vlog, news, comedy sketch, interview, documentary, etc.).
-            2. The appropriate **suitability** for the target age group.
-            Use only one of: 'under_5', 'under_10', 'under_13', 'under_16', 'under_18', 'adult', or 'all'.
+                Analyze the following video summary and determine:
+                1. The most appropriate **category** of the video (freely infer it from context — e.g., talk show, vlog, news, comedy sketch, interview, documentary, etc.).
+                2. The appropriate **suitability** for the target age group.
+                Use only one of: 'under_5', 'under_10', 'under_13', 'under_16', 'under_18', 'adult', or 'all'.
 
-            Video Summary:
-            \"\"\"{summary}\"\"\"
+                Video Summary:
+                \"\"\"{summary}\"\"\"
 
-            Call update_video_metadata with video_name='{state['video_name']}', category, suitability.
-        """
+                Call update_video_metadata with video_name='{state['video_name']}', category, suitability.
+            """
 
-        tools = await self.__mcp_client.get_tools()
-        agent = create_agent(self.__llm, tools)
+            tools = await self.__mcp_client.get_tools()
+            agent = create_agent(self.__llm, tools)
 
-        await agent.ainvoke({
-            "messages": [
-                HumanMessage(content=prompt)
-            ]
-        })
+            await agent.ainvoke({
+                "messages": [
+                    HumanMessage(content=prompt)
+                ]
+            })
 
-        self.__logger.info(f"Result: True")
+            self.__logger.info(f"Result: True")
         return {}
 
     # ------------------------------------------------------------
