@@ -1,6 +1,6 @@
 import streamlit as st
 from dotenv import load_dotenv
-from services.scheduler_service import scheduler
+from scheduler import scheduler
 import atexit
 import os
 from decouple import config
