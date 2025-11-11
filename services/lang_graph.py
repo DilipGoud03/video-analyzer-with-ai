@@ -114,6 +114,7 @@ class LanggraphService:
     def summarize_video(self, state: MainState):
         uploaded_file = state["uploaded_file"]
         prompt = """
+            You are a video analysis expert.
             Provide a detailed and comprehensive description of this video. 
             Your response must be in a natural human-readable format describing 
             what happens in the video, including scenes, actions, objects, and emotions. 
@@ -121,7 +122,7 @@ class LanggraphService:
         """
 
         if 'prompt' in state and state['prompt'] != '':
-            prompt = f"{state['prompt']} Avoid adding introductory phrases like 'Here is the summary' or 'Okay, here’s the explanation'. Start directly with the summary content."
+            prompt = f"You are a video analysis expert. {state['prompt']} Avoid adding introductory phrases like 'Here is the summary' or 'Okay, here’s the explanation'. Start directly with the summary content."
 
         encoded_video = base64.b64encode(uploaded_file["data"]).decode("utf-8")
         message = HumanMessage(
