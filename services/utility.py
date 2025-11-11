@@ -99,7 +99,7 @@ class UtilityService:
             )
             summary_language = st.selectbox(
                 "**Summary Language:**",
-                ["Hindi", "English", "Hinglish", "Video Language"]
+                ["Hindi", "English", "Hinglish", "Video"]
             )
 
         # --- Build Prompt Based on Selections ---
