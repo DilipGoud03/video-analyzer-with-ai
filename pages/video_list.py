@@ -36,13 +36,11 @@ def filter_videos() -> list:
 
 # Section: Filter Controls
 # ------------------------
-# Provides user input fields for searching and filtering videos by category.
-col0, col1 = st.columns([1, 1])
-with col0:
-    search = st.text_input(
-        "**Search**",
-        key="search",
-    )
+# Provides user input fields for searching and.
+search = st.text_input(
+    "**Search**",
+    key="search",
+)
 
 # Section: Video Listing
 # ----------------------
