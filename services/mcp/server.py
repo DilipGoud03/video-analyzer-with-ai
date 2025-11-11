@@ -1,15 +1,21 @@
 import sys
 import os
 from mcp.server.fastmcp import FastMCP
-
-# Add project root to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from dotenv import load_dotenv
+from decouple import config
 from database.video_table import VideoTableService
+load_dotenv()
+# ------------------------------------------------------------
+# Initialize MCP Server and env variables
+# ------------------------------------------------------------
+mcp_host = str(config("MCP_HOST"))
+mcp_port = int(config("MCP_PORT"))
 
-# ------------------------------------------------------------
-# Initialize MCP Server
-# ------------------------------------------------------------
-mcp = FastMCP("VideoMetadata")
+mcp = FastMCP(
+    "VideoMetadata",
+    host=mcp_host,
+    port=mcp_port
+)
 
 
 # ------------------------------------------------------------

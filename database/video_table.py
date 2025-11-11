@@ -1,7 +1,7 @@
 from database.connection import Connection
 import mysql.connector
 from enumeration.suitability import SuitableForEnum
-
+from logger_app import setup_logger
 # ------------------------------------------------------------
 # Class: VideoTableService
 # Description:
@@ -24,7 +24,8 @@ class VideoTableService:
     def __init__(self):
         self.__connection = Connection()
         self.__db = None
-    
+        self.__logger = setup_logger(__name__)
+
     # ------------------------------------------------------------
     # Method: _connect
     # Description:
@@ -86,8 +87,7 @@ class VideoTableService:
             if suitability:
                 where_clauses = True
                 if suitability == SuitableForEnum.ALL:
-                    where_clauses = False
-                    pass
+                    query += " WHERE suitability = 'all'"
                 if suitability == SuitableForEnum.UNDER_5:
                     query += " WHERE suitability IN ('all', 'under_5')"
                 elif suitability == SuitableForEnum.UNDER_10:
@@ -99,7 +99,7 @@ class VideoTableService:
                 elif suitability == SuitableForEnum.UNDER_18:
                     query += " WHERE suitability IN ('all', 'under_5', 'under_10', 'under_13', 'under_16', 'under_18')"
                 elif suitability == SuitableForEnum.ADULT:
-                    query += " WHERE suitability IN ('all', 'under_5', 'under_10', 'under_13', 'under_16', 'under_18')"
+                    query += " WHERE suitability IN ('all', 'under_5', 'under_10', 'under_13', 'under_16', 'under_18', 'adult')"
 
             if filter:
                 if where_clauses == True:
@@ -129,33 +129,29 @@ class VideoTableService:
     def update_video(self, video_name: str, category: str = "", suitability: str = "") -> bool:
         try:
             self._connect()
-            updates = []
+            update_variable = []
             values = []
 
             if category and category.strip() != "":
-                updates.append("`category` = %s")
+                update_variable.append("`category` = %s")
                 values.append(category)
 
             if suitability and suitability.strip() != "":
-                updates.append("`suitability` = %s")
+                update_variable.append("`suitability` = %s")
                 values.append(suitability)
 
-            if not updates:
+            if not update_variable:
                 print("No fields to update.")
                 return False
 
-            query = f"UPDATE `videos` SET {', '.join(updates)} WHERE `video_name` = %s"
+            query = f"UPDATE `videos` SET {', '.join(update_variable)} WHERE `video_name` = %s"
+            self.__logger.info(f"Query: {query}")
             values.append(video_name)
 
             with self.__db.cursor() as cursor:
                 cursor.execute(query, tuple(values))
-                if cursor.rowcount == 0:
-                    print("No video found with that name.")
-                    return False
-
             self.__db.commit()
             return True
-
         except mysql.connector.Error as e:
             print(f"MySQL error: {e}")
             return False

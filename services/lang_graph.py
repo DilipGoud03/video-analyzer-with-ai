@@ -183,25 +183,32 @@ class LanggraphService:
     # ------------------------------------------------------------
 
     async def validate_and_update_video(self, state: MainState):
-        if state.get("is_new_video") and state["is_new_video"] is True:
-            summary = state.get("summary", "No summary available")
-            prompt = f"""
-                Analyze the video summary: '{summary}'.
-                Determine category (Like in Film & Animation, Autos & Vehicles, Pets & Animals, Travel & Events, People & Blogs, News & Politics, Science & Technology, Howto & Style, Nonprofits & Activism, Music, Sports, Short, Movies Education, Gaming, Videoblogging, Comedy, Entertainment, Movies, Anime/Animation, Action/Adventure, Sci-Fi/Fantasy, Classics, Comedy, Documentary, Drama, Family, Foreign, Horror, Thriller, Shorts, Shows, Trailers) 
-                and suitability (use ONLY: 'under_5, 'under_10','under_13','under_16','under_18','adult', 'all').
-                Call update_video_metadata with video_name='{state['video_name']}', category, suitability.
-            """
+        # if state.get("is_new_video") and state["is_new_video"] is True:
+        summary = state.get("summary", "No summary available")
+        prompt = f"""
+            You are a video content analyst.
 
-            tools = await self.__mcp_client.get_tools()
-            agent = create_agent(self.__llm, tools)
+            Analyze the following video summary and determine:
+            1. The most appropriate **category** of the video (freely infer it from context — e.g., talk show, vlog, news, comedy sketch, interview, documentary, etc.).
+            2. The appropriate **suitability** for the target age group.
+            Use only one of: 'under_5', 'under_10', 'under_13', 'under_16', 'under_18', 'adult', or 'all'.
 
-            result = await agent.ainvoke({
-                "messages": [
-                    HumanMessage(content=prompt)
-                ]
-            })
+            Video Summary:
+            \"\"\"{summary}\"\"\"
 
-            self.__logger.info(f"Result: {result}")
+            Call update_video_metadata with video_name='{state['video_name']}', category, suitability.
+        """
+
+        tools = await self.__mcp_client.get_tools()
+        agent = create_agent(self.__llm, tools)
+
+        await agent.ainvoke({
+            "messages": [
+                HumanMessage(content=prompt)
+            ]
+        })
+
+        self.__logger.info(f"Result: True")
         return {}
 
     # ------------------------------------------------------------

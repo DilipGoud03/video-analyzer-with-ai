@@ -1,7 +1,6 @@
 .env
 video-analyzer-venv
 videos/*
-/__pycache__
-*/__pycache__
+**/__pycache__
 database/vector_db/*
 celerybeat-schedule

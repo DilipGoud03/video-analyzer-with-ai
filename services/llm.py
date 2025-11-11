@@ -1,7 +1,6 @@
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from decouple import config
-from logger_app import setup_logger
 # ------------------------------------------------------------
 # Class: LLMService
 # Description:
@@ -22,8 +21,6 @@ class LLMService:
         self.__provider = str(config("PROVIDER"))
         self.__chat_model = str(config("CHAT_MODEL"))
         self.__embedding_model = str(config("EMBEDDING_MODEL"))
-        self.__logger = setup_logger(__name__
-                                     )
 
     # ------------------------------------------------------------
     # Method: gemini_chat_model
@@ -33,7 +30,6 @@ class LLMService:
     # ------------------------------------------------------------
 
     def gemini_chat_model(self):
-        self.__logger.info("===setup_logger===")
         return ChatGoogleGenerativeAI(
             model=self.__chat_model,
             temperature=0,
@@ -49,7 +45,6 @@ class LLMService:
     #   Uses "gpt-4o-mini" for cost-effective responses.
     # ------------------------------------------------------------
     def gemini_embedding_model(self):
-        self.__logger.info("===gemini_embedding_model===")
         return GoogleGenerativeAIEmbeddings(
             model=self.__embedding_model
         )
@@ -61,7 +56,6 @@ class LLMService:
     #   Uses "gpt-4o-mini" for cost-effective responses.
     # ------------------------------------------------------------
     def openai_chat_model(self):
-        self.__logger.info("===openai_chat_model===")
         return ChatOpenAI(model=self.__chat_model, temperature=0, verbose=True)
 
     # ------------------------------------------------------------
@@ -71,7 +65,6 @@ class LLMService:
     #   similarity, clustering, or semantic search.
     # ------------------------------------------------------------
     def openai_embedding_model(self):
-        self.__logger.info("===openai_embedding_model===")
         return OpenAIEmbeddings(model=self.__embedding_model)
 
     # ------------------------------------------------------------
@@ -81,8 +74,6 @@ class LLMService:
     #   depending on the configured provider.
     # ------------------------------------------------------------
     def get_chat_model(self):
-        self.__logger.info("===get_chat_model===")
-
         if self.__provider == 'openai':
             return self.openai_chat_model()
         return self.gemini_chat_model()
@@ -94,7 +85,6 @@ class LLMService:
     #   depending on the configured provider.
     # ------------------------------------------------------------
     def get_embedding_model(self):
-        self.__logger.info("===get_embedding_model===")
         if self.__provider == 'openai':
             return self.openai_embedding_model()
         return self.gemini_embedding_model()
