@@ -19,7 +19,7 @@ import base64
 from logger_app import setup_logger
 from langchain.agents import create_agent
 from langchain_mcp_adapters.client import MultiServerMCPClient
-
+import asyncio
 # ------------------------------------------------------------
 # Global: MEMORY_SAVER
 # Description:
@@ -85,7 +85,30 @@ class LanggraphService:
         self.__graph = None
         self.__mcp_client = None
 
+    # ------------------------------------------------------------
+    # Async: initialize_mcp
+    # Description:
+    #   Starts the MCP stdio server (VideoDatabase) and loads
+    #   all available tools for the LLM to use.
+    # ------------------------------------------------------------
 
+    async def initialize_mcp(self):
+        try:
+            self.__logger.info("Starting MCP initialization...")
+            self.__mcp_client = MultiServerMCPClient(
+                {
+                    "VideoDatabase": {
+                        "transport": "streamable_http",
+                        "url": "http://localhost:8080/mcp"
+                    }
+                }
+            )
+            self.__logger.info("LLM successfully bound with MCP tools.")
+            return self.__mcp_client
+
+        except Exception as e:
+            self.__logger.error(f"MCP initialization failed: {e}")
+            return []
     # ------------------------------------------------------------
     # Node: upload_video
     # Description:
@@ -143,32 +166,7 @@ class LanggraphService:
 
         response = self.__llm_service.get_chat_model().invoke([message])
         return {"summary": response.content}
-    
-    # ------------------------------------------------------------
-    # Async: initialize_mcp
-    # Description:
-    #   Starts the MCP stdio server (VideoDatabase) and loads
-    #   all available tools for the LLM to use.
-    # ------------------------------------------------------------
 
-    async def initialize_mcp(self):
-        try:
-            self.__logger.info("Starting MCP initialization...")
-            self.__mcp_client = MultiServerMCPClient(
-                {
-                    "VideoDatabase": {
-                        "transport": "streamable_http",
-                        "url": "http://localhost:8080/mcp"
-                    }
-                }
-            )
-            self.__logger.info("LLM successfully bound with MCP tools.")
-            return self.__mcp_client
-
-        except Exception as e:
-            self.__logger.error(f"MCP initialization failed: {e}")
-            return []
-    
     # ------------------------------------------------------------
     # async Node: validate_and_update_video
     # Description:
@@ -184,8 +182,8 @@ class LanggraphService:
                 You are a video content analyst.
 
                 Analyze the following video summary and determine:
-                1. The most appropriate **category** of the video (freely infer it from context — e.g., talk show, vlog, news, comedy sketch, interview, documentary, etc.).
-                2. The appropriate **suitability** for the target age group.
+                1. The most appropriate **category** of the video (freely infer it from context — e.g., talk show, vlog, news, comedy, sketch, interview, documentary, etc.).
+                2. The appropriate **suitability** for the target age group and firstly check this video is suitable for kids.
                 Use only one of: 'under_5', 'under_10', 'under_13', 'under_16', 'under_18', 'adult', or 'all'.
 
                 Video Summary:
@@ -274,7 +272,8 @@ class LanggraphService:
             )
         ])
 
-        combine_docs_chain = create_stuff_documents_chain(self.__llm_service.get_chat_model(), prompt)
+        combine_docs_chain = create_stuff_documents_chain(
+            self.__llm_service.get_chat_model(), prompt)
         retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
 
         result = retrieval_chain.invoke({"input": question})
