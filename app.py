@@ -1,6 +1,5 @@
 import streamlit as st
 from dotenv import load_dotenv
-import atexit
 import os
 from decouple import config
 
@@ -12,6 +11,9 @@ load_dotenv()
 if not os.environ.get("GOOGLE_API_KEY"):
     os.environ["GOOGLE_API_KEY"] = str(config("GOOGLE_API_KEY"))
 
+# Configure Openai API key if not already set in environment
+if not os.environ.get("OPENAI_API_KEY"):
+    os.environ["OPENAI_API_KEY"] = str(config("OPENAI_API_KEY"))
 
 # Define Streamlit pages
 upload_page = st.Page("pages/upload.py", title="Upload Video")
