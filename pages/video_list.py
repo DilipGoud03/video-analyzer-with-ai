@@ -4,6 +4,7 @@ from moviepy.video.io.VideoFileClip import VideoFileClip
 from services.utility import UtilityService
 from database.video_table import VideoTableService
 from decouple import config
+from enumeration.suitability import SuitableForEnum
 
 # Initialize services and configuration
 video_table = VideoTableService()
@@ -32,7 +33,8 @@ st.session_state["qa_listing"] = []
 # - Returns a list of filtered video records.
 def filter_videos() -> list:
     search_val = st.session_state.get("search", "")
-    return video_table.video_list(search_val)
+    suitable_val = st.session_state.get("suitable", "")
+    return video_table.video_list(suitable_val, search_val)
 
 # Section: Filter Controls
 # ------------------------
@@ -42,6 +44,13 @@ with col0:
     search = st.text_input(
         "**Search**",
         key="search",
+    )
+
+with col1:
+    suitable = st.selectbox(
+        label="**suitable for**",
+        key="suitable",
+        options=SuitableForEnum
     )
 
 # Section: Video Listing

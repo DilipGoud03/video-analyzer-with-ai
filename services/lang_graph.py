@@ -17,6 +17,8 @@ from uuid import uuid4
 import mimetypes
 import base64
 from logger_app import setup_logger
+from langchain.agents import create_agent
+from langchain_mcp_adapters.client import MultiServerMCPClient
 
 # ------------------------------------------------------------
 # Global: MEMORY_SAVER
@@ -81,6 +83,7 @@ class LanggraphService:
         self.__llm_service = LLMService()
         self.__logger = setup_logger(__name__)
         self.__graph = None
+        self.__mcp_client = None
 
 
     # ------------------------------------------------------------
@@ -140,6 +143,68 @@ class LanggraphService:
 
         response = self.__llm_service.get_chat_model().invoke([message])
         return {"summary": response.content}
+    
+    # ------------------------------------------------------------
+    # Async: initialize_mcp
+    # Description:
+    #   Starts the MCP stdio server (VideoDatabase) and loads
+    #   all available tools for the LLM to use.
+    # ------------------------------------------------------------
+
+    async def initialize_mcp(self):
+        try:
+            self.__logger.info("Starting MCP initialization...")
+            self.__mcp_client = MultiServerMCPClient(
+                {
+                    "VideoDatabase": {
+                        "transport": "streamable_http",
+                        "url": "http://localhost:8080/mcp"
+                    }
+                }
+            )
+            self.__logger.info("LLM successfully bound with MCP tools.")
+            return self.__mcp_client
+
+        except Exception as e:
+            self.__logger.error(f"MCP initialization failed: {e}")
+            return []
+    
+    # ------------------------------------------------------------
+    # async Node: validate_and_update_video
+    # Description:
+    #   Sends the summary of provided video to MCP Tool
+    #   MCP tool analyze the summary and retrive the category and suitaibilty based on summary content
+    #   and update this details by using mcp server in database.
+    # ------------------------------------------------------------
+
+    async def validate_and_update_video(self, state: MainState):
+        if state.get("is_new_video") and state["is_new_video"] is True:
+            summary = state.get("summary", "No summary available")
+            prompt = f"""
+                You are a video content analyst.
+
+                Analyze the following video summary and determine:
+                1. The most appropriate **category** of the video (freely infer it from context — e.g., talk show, vlog, news, comedy sketch, interview, documentary, etc.).
+                2. The appropriate **suitability** for the target age group.
+                Use only one of: 'under_5', 'under_10', 'under_13', 'under_16', 'under_18', 'adult', or 'all'.
+
+                Video Summary:
+                \"\"\"{summary}\"\"\"
+
+                Call update_video_metadata with video_name='{state['video_name']}', category, suitability.
+            """
+
+            tools = await self.__mcp_client.get_tools()
+            agent = create_agent(self.__llm_service.get_chat_model(), tools)
+
+            await agent.ainvoke({
+                "messages": [
+                    HumanMessage(content=prompt)
+                ]
+            })
+
+            self.__logger.info(f"Result: True")
+        return {}
 
     # ------------------------------------------------------------
     # Node: store_summary_in_db
@@ -248,6 +313,8 @@ class LanggraphService:
         # Add nodes
         pipeline.add_node("upload_video", self.upload_video)
         pipeline.add_node("summarize_video", self.summarize_video)
+        pipeline.add_node("validate_and_update_video", lambda state: asyncio.run(
+            self.validate_and_update_video(state)))
         pipeline.add_node("store_summary_in_db", self.store_summary_in_db)
         pipeline.add_node("ask_question", self.ask_question)
 
@@ -263,6 +330,7 @@ class LanggraphService:
 
         # Sequential edges
         pipeline.add_edge("upload_video", "summarize_video")
+        pipeline.add_edge("summarize_video", "validate_and_update_video")
         pipeline.add_edge("summarize_video", "store_summary_in_db")
         pipeline.add_edge("store_summary_in_db", END)
         pipeline.add_edge("ask_question", END)

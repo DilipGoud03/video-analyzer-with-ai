@@ -1,6 +1,7 @@
 import streamlit as st
 from services.lang_graph import LanggraphService
 from logger_app import setup_logger
+import asyncio
 
 # ------------------------------------------------------------
 # Class: UtilityService
@@ -25,6 +26,7 @@ class UtilityService:
     # ------------------------------------------------------------
     def __init__(self) -> None:
         self.__langgraph_service = LanggraphService()
+        asyncio.run(self.__langgraph_service.initialize_mcp())
         self.__logger = setup_logger(__name__)
         self.__graph = self.__langgraph_service.build_pipeline()
         self.__config = {
